@@ -1,7 +1,7 @@
 # Plot ensemble results with samples
 #
 ## Create ensemble with:
-# source(here("analysis", "code", "create-ensembles.R"))
+# source(here("code", "create-ensembles.R"))
 # ensembles <- create_ensembles(results = results,
 #                               truncate_weeks = 2,
 #                               quantiles = c(0.02, 0.1, 0.5, 0.90, 0.98))

@@ -35,11 +35,11 @@ scenario_colours <- c("A" = "#e66101",
 
 ```{r load-samples}
 # Load samples from all models
-source(here("analysis", "code", "import-results.R"))
+source(here("code", "import-results.R"))
 results <- import_results(round = 2, local = local)
 
 # Clean and include observed data where available
-source(here("analysis", "code", "format-results.R"))
+source(here("code", "format-results.R"))
 results <- format_results(results = results, 
                           n_model_min = 3, local = local) |> 
   mutate(target = ordered(x = paste(location, target_variable),
@@ -57,7 +57,7 @@ Sample trajectories also allowed us to explore projected peaks in incidence. We 
 ensemble_caption <- "Figure 1. Projections of incidence per 100,000 population, showing median, 50%, and 99% probabilistic intervals, using: A) no ensemble method (100 samples per model); B) a median across each model's projections at a given quantile interval; C) quantile intervals of the distribution across all samples; D) a weighted median across samples with each sample weighted by its own performance against observed data."
 
 # Create three ensembles ("Sample", "Quantile", "Weighted")
-source(here("analysis", "code", "create-ensembles.R"))
+source(here("code", "create-ensembles.R"))
 truncate_weeks <- 2 # scoring evaluation against all data -2 weeks before now
 ensembles <- create_ensembles(results = results, 
                               truncate_weeks = truncate_weeks,
@@ -66,7 +66,7 @@ ensembles <- create_ensembles(results = results,
   mutate(target = ordered(x = paste(location, target_variable),
                           labels = target_labels))
 # Plot: All targets' trajectories over time and by ensemble
-source(here("analysis", "code", "plot.R"))
+source(here("code", "plot.R"))
 plots <- purrr::map(target_levels,
                     ~ plot_ensemble_results(ensembles, results, 
                                             set_target = .x,
@@ -77,7 +77,7 @@ figure_1 <- wrap_plots(plots,
            guides = "collect") &
   theme(legend.position = "top")
 
-ggsave(filename = here("analysis", "output", "figure-1.jpg"),
+ggsave(filename = here("output", "figure-1.jpg"),
        plot = figure_1, height = 8, width = 12)
 
 figure_1
@@ -89,8 +89,8 @@ Next we took a set of 23 quantiles from the distribution of samples provided by 
 ```{r width-ensembles, fig.cap=width_plot_caption, fig.width = 12}
 width_plot_caption <- "Figure 2. Mean central prediction intervals across time and scenarios. Mean lower and upper interval bounds: 52 week mean of quantiles in the sample and quantile ensembles"
 
-source(here("analysis", "code", "compare-ensembles.R"))
-ggsave(filename = here("analysis", "output", "figure-2.jpg"),
+source(here("code", "compare-ensembles.R"))
+ggsave(filename = here("output", "figure-2.jpg"),
        plot = width_plot, width = 12)
 width_plot
 ```
@@ -102,7 +102,7 @@ This showed both ensembles produced similar values around the centre of the dist
 weights_caption <- "Figure 3. Weight of individual samples in an ensemble across all available samples for each of five projection targets. Samples were weighted by the inverse of mean absolute error against 28 weeks' observed data, meaning higher weight reflects better forecasting performance."
 
 # Score samples
-source(here("analysis", "code", "score-samples.R"))
+source(here("code", "score-samples.R"))
 samples_weighted <- score_samples(results = results, 
                                   truncate_weeks = truncate_weeks) |> 
   ungroup()
@@ -134,7 +134,7 @@ plot_sample_weights <- weights |>
   theme(legend.position = "bottom") +
   guides(color = guide_legend(override.aes = list(size = 2, alpha = 1)))
 
-ggsave(filename = here("analysis", "output", "figure-3.jpg"),
+ggsave(filename = here("output", "figure-3.jpg"),
        plot = plot_sample_weights, width = 12)
 plot_sample_weights
 ```

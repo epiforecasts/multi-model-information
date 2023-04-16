@@ -14,11 +14,16 @@ import_results <- function(round = 1,
                            local = TRUE) {
 
   if (local) {
+    # if hub is cloned locally, get path to hub/data-processed
+    hub_data_path <- gsub("aggregation-info-loss", # this dir
+                          "covid19-scenario-hub-europe", # hub dir
+                          here::here("data-processed"))
+
     # get scenarios metadata
-    scenarios <- read_rds(here("analysis", "data", "scenarios.rds"))
+    scenarios <- read_rds(here("data", "scenarios.rds"))
 
     # get csv paths
-    model_results <- list.files(here("data-processed"),
+    model_results <- list.files(hub_data_path,
                                 full.names = TRUE, recursive = TRUE)
     model_results <- model_results[grepl(".csv", model_results)]
 
@@ -26,7 +31,7 @@ import_results <- function(round = 1,
     models <- tibble(file = model_results) |>
       mutate(date = as.Date(str_extract(file,
                                         "2022-[:digit:][:digit:]-[:digit:][:digit:]")),
-             model = str_remove(file, here("data-processed")),
+             model = str_remove(file, hub_data_path),
              model = str_extract(model, "\\/(.+)\\/"),
              model = str_remove_all(model, "\\/"))
 

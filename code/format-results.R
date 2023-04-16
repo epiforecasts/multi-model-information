@@ -7,7 +7,7 @@ library(dplyr)
 library(lubridate)
 library(covidHubUtils)
 # Example:
-# source(here("analysis", "import-results.R"))
+# source(here("import-results.R"))
 # results <- import_results(round = round, local = local)
 # results <- format_results()
 
@@ -30,13 +30,13 @@ format_results <- function(results,
 
   # Add observed data ------------------------------------------------------
   if (local) { # load a local copy
-    obs <- read_csv(here("analysis", "data", "obs.csv"))
+    obs <- read_csv(here("data", "obs.csv"))
   } else {
     obs <- load_truth(
       truth_source = "JHU",
       temporal_resolution = "weekly",
       hub = "ECDC")
-    write_csv(obs, here("analysis", "data", "obs.csv"))
+    write_csv(obs, here("data", "obs.csv"))
   }
 
   if (missing(max_obs_date)) {

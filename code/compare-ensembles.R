@@ -12,7 +12,7 @@
 #   ungroup() |>
 #   mutate(proj_cumulative_p = proj_cumulative / population * 100)
 #
-# cumulative_past <- read_csv(here("analysis", "data", "obs.csv")) |>
+# cumulative_past <- read_csv(here("data", "obs.csv")) |>
 #   filter(target_end_date >= min(results$target_end_date) - lubridate::weeks(52) &
 #            target_end_date < min(results$target_end_date) &
 #            location %in% unique(results$location) &
