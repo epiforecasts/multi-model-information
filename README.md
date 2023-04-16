@@ -6,8 +6,8 @@ This work aims to demonstrate what information is lost in the process of summari
 Work led by Kath Sherratt on behalf of the European Scenario Modelling Hub (Round 2). See [authors](#authors).
 
 - See the [Abstract](#abstract) and [presentation](https://docs.google.com/presentation/d/1tktKl41Sa7KMzwUHpLcJVFEechMlHut5aoKC6lX6tbc/edit#slide=id.g2177422d982_0_45)
-- Read the [current draft under co-author review](https://github.com/covid19-forecast-hub-europe/covid19-scenario-hub-europe/blob/analysis/analysis/output/Co-author%20review_%20Characterising%20information%20loss%20due%20to%20aggregating%20epidemic%20model%20outputs.pdf). 
-- All [code](code) and [data](data) are available: the best place to start is the [results Rmarkdown document](https://github.com/covid19-forecast-hub-europe/covid19-scenario-hub-europe/blob/analysis/analysis/output/output-rmd.rmd)
+- Read the [current draft under co-author review](output/Co-author%20review_%20Characterising%20information%20loss%20due%20to%20aggregating%20epidemic%20model%20outputs.pdf). 
+- All [code](code) and [data](data) are available: the best place to start is the [results Rmarkdown document](output/output-rmd.rmd)
 
 ---
 
@@ -15,18 +15,18 @@ Work led by Kath Sherratt on behalf of the European Scenario Modelling Hub (Roun
 
 - We are currently at pre-submission stage
    - A full working draft is under review by co-authors
-   - See [current draft (pdf)](https://github.com/covid19-forecast-hub-europe/covid19-scenario-hub-europe/blob/analysis/analysis/output/Co-author%20review_%20Characterising%20information%20loss%20due%20to%20aggregating%20epidemic%20model%20outputs.pdf)
+   - See [current draft (pdf)](output/Co-author%20review_%20Characterising%20information%20loss%20due%20to%20aggregating%20epidemic%20model%20outputs.pdf)
 - Next steps will be to add to medRxiv and submit to Epidemics
 
 #### Development
 
 - Code
    - Results are generated from an [Rmd document](https://github.com/covid19-forecast-hub-europe/covid19-scenario-hub-europe/blob/analysis/analysis/output/output-rmd.rmd)
-   - All comments and feedback, as well as requests for guidance on using the code, are very welcome - please [open an Issue](https://github.com/covid19-forecast-hub-europe/covid19-scenario-hub-europe/issues) or contact [Kath Sherratt](https://github.com/kathsherratt)
+   - All comments and feedback, as well as requests for guidance on using the code, are very welcome - please [open an Issue](https://github.com/covid19-forecast-hub-europe/aggregation-info-loss/issues) or contact [Kath Sherratt](https://github.com/kathsherratt)
    - Full commit history for this project prior to 16 April 2023 is available as a [branch of the Scenario hub](https://github.com/covid19-forecast-hub-europe/covid19-scenario-hub-europe/tree/analysis/analysis)
 - Analysis
    - Write up is currently in a [Google doc](https://docs.google.com/document/d/1Kh_vvFbWwnLhfChRS-yMyARCnkL0ttAvDXsJQIwwFcY/edit)
-   - The results section is also available in [html](https://htmlpreview.github.io/?https://raw.githubusercontent.com/covid19-forecast-hub-europe/covid19-scenario-hub-europe/analysis/analysis/output/output-rmd.html)
+   - The results section is also available in [html](https://htmlpreview.github.io/?https://raw.githubusercontent.com/covid19-forecast-hub-europe/aggregation-info-loss/output/output-rmd.html)
 
 ---
 
