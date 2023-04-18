@@ -21,19 +21,17 @@ score_samples <- function(results,
   mae <- results |>
     filter(
       # score against observations
-      !is.na(obs) &
+      !is.na(obs_100k) &
         # score against sub-set of data
         target_end_date <= last_data_point) |>
     # absolute error
     mutate(ae = abs(value_100k - obs_100k),
-           obs_100k_1 = ifelse(obs_100k==0, 1e-06, obs_100k),
-           ape = abs((value_100k - obs_100k_1) / obs_100k_1)) |>
+           obs_100k_1 = ifelse(obs_100k==0, 1e-06, obs_100k)) |>
     # mean absolute error
     group_by(location, target_variable,
              model, sample, scenario_id) |>
     summarise(mae = mean(ae),
               inv_mae = 1/mae,
-              mape = mean(ape),
               .groups = "drop")
 
   # ----- Create MAE weights for each value

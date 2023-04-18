@@ -8,19 +8,8 @@ source(here("code", "score-samples.R"))
 # ensembles <- create_ensembles(results, c(0.01, 0.5, 0.99))
 
 create_ensembles <- function(results,
-                             truncate_weeks = 2,
+                             truncate_weeks = 0,
                              quantiles = c(0.01, 0.25, 0.5, 0.75, 0.99)) {
-
-  # Create simple ensemble of samples -----
-  ensemble_samples <- results |>
-    group_by(round, location, target_variable, target_end_date, scenario_id) |>
-    summarise(
-      n = n(),
-      value = quantile(value_100k, quantiles),
-      quantile = paste0("q", quantiles),
-      model = "Samples",
-      .groups = "drop"
-    )
 
   # Ensemble of samples weighted by predictive accuracy -----
   ensemble_weighted <- results |>
@@ -33,8 +22,19 @@ create_ensembles <- function(results,
                                                      probs = quantiles,
                                                      weights = weight),
       quantile = paste0("q", quantiles),
-      model = paste0("Samples"),
+      model = "Samples",
       scenario_id = "Weighted",
+      .groups = "drop"
+    )
+
+  # Create simple ensemble of samples -----
+  ensemble_samples <- results |>
+    group_by(round, location, target_variable, target_end_date, scenario_id) |>
+    summarise(
+      n = n(),
+      value = quantile(value_100k, quantiles),
+      quantile = paste0("q", quantiles),
+      model = "Samples",
       .groups = "drop"
     )
 
