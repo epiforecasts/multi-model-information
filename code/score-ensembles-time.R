@@ -12,9 +12,11 @@ library(here)
 library(dplyr)
 library(lubridate)
 library(purrr)
+library(ggplot2)
 source(here("code", "import-results.R"))
 source(here("code", "format-results.R"))
 source(here("code", "create-ensembles.R"))
+source(here("code", "score-samples.R"))
 local <- TRUE
 
 # Load samples from all models
@@ -43,65 +45,96 @@ results_window <- map(forecast_dates,
                                                  obs_100k, NA)))
 names(results_window) <- forecast_dates
 
+
+# Sample weights over time --------------------------------------------------
+weights_time <- map_dfr(results_window,
+                        ~ score_samples(results = .x, truncate_weeks = 0),
+                        .id = "forecast_date") |>
+  ungroup()
+
+# summarise weights
+weights <- weights_time |>
+  ungroup() |>
+  filter(horizon == 1) |>
+  mutate(forecast_date = as.Date(forecast_date)) |>
+  select(forecast_date, location, target_variable, scenario_id,
+         model, sample,
+         mae, weight)
+
+weights |>
+  mutate(sample_scenario = paste(model, sample, scenario_id),
+         target = paste(location, target_variable),
+         scenario_id = ordered(scenario_id)) |>
+  ggplot(aes(x = forecast_date, y = weight,
+             group = sample_scenario,
+             col = model, fill = model
+             )) +
+  # geom_line() +
+  geom_col() +
+  labs(x = NULL, y = "Weight of samples") +
+  facet_wrap(~target, nrow = 5, scales = "free") +
+  theme_bw() +
+  theme(legend.position = "right")
+
+ggsave("weights-time-sum.jpg", width = 6, height = 12)
+
+
+# Ensembles ---------------------------------------------------------------
 # Create ensemble forecasts
 ensemble_all <- map_dfr(results_window,
-                        ~ create_ensembles(results = .x, truncate_weeks = 0),
-                        .id = "forecast_date")
+                        ~ create_ensembles(results = .x,
+                                           truncate_weeks = 0),
+                        .id = "forecast_date") |>
+  mutate(model = ifelse(scenario_id == "Weighted", "Weighted", model)) |>
+  # only keep forecasts, not "past" projections
+  filter(target_end_date > forecast_date)
 
-# Process
-ensemble_all <- ensemble_all |>
-  filter(target_end_date > forecast_date) |>
-  mutate(model = paste(model, scenario_id))
-
-# Score
-
-# scratchpad --------------------------------------------------------------
-library(ggplot2)
-
+# plot weighted ensemble
 obs_data <- results |>
   distinct(location, target_variable, target_end_date, obs_100k)
 
-# plot weighted ensemble
-ensemble_weighted <- ensemble_all |>
-  filter(model == "Samples Weighted") |>
+# ensemble_weighted <- ensemble_all |>
+#   filter(model == "Samples Weighted")
+
+ensemble_all |>
+  # ----- Data
   pivot_wider(names_from = quantile) |>
   mutate(median = q0.5) |>
   select(-q0.5) |>
-  left_join(obs_data, by = c("location", "target_variable", "target_end_date"))
-
-ensemble_weighted |>
-  mutate(forecast_date = as.Date(forecast_date)) |>
-  mutate(forecast_date = ordered(forecast_date)) |>
-  mutate(target = paste(location, target_variable)) |>
+  left_join(obs_data, by = c("location", "target_variable", "target_end_date")) |>
+  mutate(forecast_date = as.Date(forecast_date),
+         target = ordered(paste(location, target_variable)),
+         model = ordered(model),
+         scenario_id = ordered(scenario_id)) |>
+  # ----- Plot
   ggplot(aes(x = target_end_date,
-             fill = forecast_date, col = forecast_date
+             #group = forecast_date,
+             col = scenario_id,
+             fill = scenario_id
              )) +
   # ----- Geoms
   # ensembles
-  # geom_ribbon(aes(ymin = q0.01, ymax = q0.99),
-  #             col = NA, alpha = 0.1) +
+  geom_ribbon(aes(ymin = q0.01, ymax = q0.99),
+              col = NA, alpha = 0.1) +
   geom_ribbon(aes(ymin = q0.25, ymax = q0.75),
               col = NA, alpha = 0.4) +
   geom_line(aes(y = median), lwd = 1) +
   # observed data as points
   geom_point(aes(y = obs_100k),
-             colour = "black", size = 0.6, show.legend = FALSE) +
+             colour = "black", size = 0.6,
+             show.legend = FALSE) +
   # ----- Structure
   # facets
-  facet_wrap(~ target,
-             ncol = 1,
+  facet_grid(cols = vars(target), rows = vars(model),
              scales = "free") +
   # labels
   labs(x = NULL, y = "inc per 100k") +
   scale_x_date(breaks = "1 month", date_labels = "%b '%y") +
   # theme
   theme_bw() +
-  theme(legend.position = "none",
-        axis.line = element_line(linewidth = 0.25),
-        strip.background = element_blank(),
-        panel.border = element_blank(),
-        panel.grid = element_blank())
-ggsave("forecast-over-time.jpg", height = 15, width = 12)
+  theme(legend.position = "bottom")
+
+ggsave("forecast-over-time.jpg", height = 12, width = 4)
 
 
 # ideas -------------------------------------------------------------------
