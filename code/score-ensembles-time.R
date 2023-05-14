@@ -38,15 +38,16 @@ forecast_dates <- forecast_dates[forecast_dates <= latest_data + 7]
 results_window <- map(forecast_dates,
                       ~ results |>
                         group_by(location, target_variable) |>
-                        # keep projections up to forecasting date + 4 weeks ahead
-                        filter(target_end_date <= .x + weeks(4)) |>
+                        # keep projections up to forecasting date
+                        #    + 4 weeks ahead
+                        filter(target_end_date <= .x + weeks(16)) |> # 4
                         # remove observed data in forecast horizon
                         mutate(obs_100k = ifelse(target_end_date < .x,
                                                  obs_100k, NA)))
 names(results_window) <- forecast_dates
 
 
-# Sample weights over time --------------------------------------------------
+# Sample weights over time
 weights_time <- map_dfr(results_window,
                         ~ score_samples(results = .x, truncate_weeks = 0),
                         .id = "forecast_date") |>
@@ -59,12 +60,25 @@ weights <- weights_time |>
   mutate(forecast_date = as.Date(forecast_date)) |>
   select(forecast_date, location, target_variable, scenario_id,
          model, sample,
-         mae, weight)
-
-weights |>
-  mutate(sample_scenario = paste(model, sample, scenario_id),
+         mae, weight) |>
+  mutate(sample_scenario = paste0(substr(model, 1, 3), sample, scenario_id),
          target = paste(location, target_variable),
-         scenario_id = ordered(scenario_id)) |>
+         scenario_id = ordered(scenario_id))
+
+# Create ensemble forecasts
+ensemble_all <- map_dfr(results_window,
+                        ~ create_ensembles(results = .x,
+                                           truncate_weeks = 0),
+                        .id = "forecast_date") |>
+  mutate(model = ifelse(scenario_id == "Weighted", "Weighted", model)) |>
+  # only keep forecasts, not "past" projections
+  filter(target_end_date > forecast_date)
+
+# Plotting ----------------------------------------------------------------
+
+# Weights -----
+# column fill
+weights |>
   ggplot(aes(x = forecast_date, y = weight,
              group = sample_scenario,
              col = model, fill = model
@@ -76,27 +90,31 @@ weights |>
   theme_bw() +
   theme(legend.position = "right")
 
-ggsave("weights-time-sum.jpg", width = 6, height = 12)
+ggsave("output/weights-time-sum.jpg", width = 6, height = 12)
 
+# heatmap
+weights |>
+  # order by highest total weight over time
+  mutate(sample_scenario = forcats::fct_reorder(sample_scenario,
+                                                weight, sum),
+         #weight = cut_number(weight, 5)
+         ) |>
+  ggplot(aes(x = forecast_date, y = sample_scenario,
+             fill = weight)) +
+  geom_tile() +
+  scale_fill_viridis_c() +
+  #scale_fill_viridis_d() +
+  facet_wrap(~target, ncol = 5, scales = "free") +
+  theme_bw() +
+  theme(legend.position = "bottom")
 
-# Ensembles ---------------------------------------------------------------
-# Create ensemble forecasts
-ensemble_all <- map_dfr(results_window,
-                        ~ create_ensembles(results = .x,
-                                           truncate_weeks = 0),
-                        .id = "forecast_date") |>
-  mutate(model = ifelse(scenario_id == "Weighted", "Weighted", model)) |>
-  # only keep forecasts, not "past" projections
-  filter(target_end_date > forecast_date)
+ggsave("output/weights-time-heat.jpg", width = 20, height = 12)
 
-# plot weighted ensemble
+# Ensembles -----
 obs_data <- results |>
   distinct(location, target_variable, target_end_date, obs_100k)
 
-# ensemble_weighted <- ensemble_all |>
-#   filter(model == "Samples Weighted")
-
-ensemble_all |>
+ensemble_plot <- ensemble_all |>
   # ----- Data
   pivot_wider(names_from = quantile) |>
   mutate(median = q0.5) |>
@@ -105,7 +123,10 @@ ensemble_all |>
   mutate(forecast_date = as.Date(forecast_date),
          target = ordered(paste(location, target_variable)),
          model = ordered(model),
-         scenario_id = ordered(scenario_id)) |>
+         scenario_id = ordered(scenario_id))
+
+# col by scenario
+ensemble_plot |>
   # ----- Plot
   ggplot(aes(x = target_end_date,
              #group = forecast_date,
@@ -134,7 +155,45 @@ ensemble_all |>
   theme_bw() +
   theme(legend.position = "bottom")
 
-ggsave("forecast-over-time.jpg", height = 12, width = 4)
+ggsave("output/forecast-over-time.jpg", height = 12, width = 4)
+
+# show only 4 week ahead forecasts for consecutive weeks
+# compare showing 4 v 8 v 16 week
+
+ensemble_plot |>
+  mutate(horizon = ordered(target_end_date - forecast_date)) |>
+  filter(scenario_id == "Weighted"
+          & horizon %in% c("112", "56", "28") # 16, 8, and 4 weeks
+         ) |>
+  #mutate(forecast_date = ordered(forecast_date)) |>
+  # ----- Plot
+  ggplot(aes(x = target_end_date,
+             group = horizon,
+             col = horizon,
+             fill = horizon
+  )) +
+  # ----- Geoms
+  # ensembles
+  # geom_ribbon(aes(ymin = q0.01, ymax = q0.99),
+  #             col = NA, alpha = 0.1) +
+  geom_ribbon(aes(ymin = q0.25, ymax = q0.75),
+              col = NA, alpha = 0.4) +
+  geom_line(aes(y = median), lwd = 1) +
+  # observed data as points
+  geom_point(aes(y = obs_100k),
+             colour = "black", size = 0.6,
+             show.legend = FALSE) +
+  # ----- Structure
+  # facets
+  facet_grid(rows = vars(target),
+             scales = "free") +
+  # labels
+  labs(x = NULL, y = "inc per 100k") +
+  scale_x_date(breaks = "1 month", date_labels = "%b '%y") +
+  # theme
+  theme_bw() +
+  theme(legend.position = "bottom")
+
 
 
 # ideas -------------------------------------------------------------------
