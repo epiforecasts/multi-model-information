@@ -5,7 +5,6 @@
 library(here)
 library(dplyr)
 library(lubridate)
-library(covidHubUtils)
 # Example:
 # source(here("import-results.R"))
 # results <- import_results(round = round, local = local)
@@ -32,10 +31,26 @@ format_results <- function(results,
   if (local) { # load a local copy
     obs <- read_csv(here("data", "obs.csv"))
   } else {
-    obs <- load_truth(
-      truth_source = "JHU",
-      temporal_resolution = "weekly",
-      hub = "ECDC")
+    # get raw JHU data
+    cases <- read_csv("https://raw.githubusercontent.com/covid19-forecast-hub-europe/covid19-forecast-hub-europe/main/data-truth/JHU/truth_JHU-Incident%20Cases.csv") |>
+      mutate(target_variable = "inc case")
+    deaths <- read_csv("https://raw.githubusercontent.com/covid19-forecast-hub-europe/covid19-forecast-hub-europe/main/data-truth/JHU/truth_JHU-Incident%20Deaths.csv") |>
+      mutate(target_variable = "inc death")
+    pop <- read_csv("https://raw.githubusercontent.com/covid19-forecast-hub-europe/covid19-forecast-hub-europe/main/data-locations/locations_eu.csv") |>
+      select(location, population)
+    # weekly incidence
+    obs <- bind_rows(cases, deaths) |>
+      mutate(year = year(date),
+             week = week(date)) |>
+      group_by(location, location_name,
+               target_variable,
+               year, week) |>
+      summarise(target_end_date = max(date),
+                value = sum(value, na.rm = TRUE)) |>
+      ungroup() |>
+      select(-year, -week) |>
+      left_join(pop) |>
+      mutate(model = "Observed")
     write_csv(obs, here("data", "obs.csv"))
   }
 
