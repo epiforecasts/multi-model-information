@@ -11,7 +11,7 @@ library(lubridate)
 # results <- format_results()
 
 format_results <- function(results,
-                           max_obs_date,
+                           max_obs_date = as.Date("2023-03-10"),
                            n_model_min = 3,
                            local = FALSE) {
 
@@ -38,10 +38,12 @@ format_results <- function(results,
       mutate(target_variable = "inc death")
     pop <- read_csv("https://raw.githubusercontent.com/covid19-forecast-hub-europe/covid19-forecast-hub-europe/main/data-locations/locations_eu.csv") |>
       select(location, population)
+
     # weekly incidence
     obs <- bind_rows(cases, deaths) |>
-      mutate(year = year(date),
-             week = week(date)) |>
+      mutate(value = ifelse(value  < 0, NA, value),
+             year = epiyear(date),
+             week = epiweek(date)) |>
       group_by(location, location_name,
                target_variable,
                year, week) |>
@@ -51,35 +53,25 @@ format_results <- function(results,
       select(-year, -week) |>
       left_join(pop) |>
       mutate(model = "Observed")
+
     write_csv(obs, here("data", "obs.csv"))
   }
 
-  if (missing(max_obs_date)) {
-    max_obs_date <- max(results$target_end_date)
-  }
+  pop <- distinct(obs,
+                  location, population)
 
   obs <- obs |>
-    filter(between(target_end_date,
-                   min(results$target_end_date),
-                   max_obs_date)) |>
+    # filter(target_end_date >= min(results$target_end_date) &
+    #        target_end_date <= max_obs_date) |>
     rename(obs = value) |>
-    select(-model)
+    select(-c(model, population))
 
-  results <- left_join(results,
-                       obs |>
-                         select(obs,
-                                location, target_variable, target_end_date),
-                       by = c("location", "target_variable", "target_end_date"))
+  results <- left_join(results, obs)
 
   # Add values per 100k population --------------------------------------
   results <- results |>
     # get population size (from obs dataset)
-    left_join(obs |>
-                group_by(location, location_name, target_variable) |>
-                filter(target_end_date == min(target_end_date)) |>
-                select(location, target_variable,
-                       location_name, population),
-              by = c("location", "target_variable")) |>
+    left_join(pop) |>
     # take value per 100k
     mutate(value_100k = value / population * 100000,
            obs_100k = obs / population * 100000)
