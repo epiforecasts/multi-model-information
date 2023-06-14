@@ -41,6 +41,7 @@ import_observed <- function(local = TRUE) {
       left_join(pop) |>
       mutate(model = "Observed")
     write_csv(obs, here("data", "obs.csv"))
+    message("Data updated and saved locally")
   }
 
   return(obs)
@@ -129,11 +130,10 @@ import_projections <- function(round = 2,
              target_end_date = as.Date(scenarios[[paste0("round-", !!round)]][["origin_date"]]) +
                lubridate::weeks(horizon) - lubridate::days(1),
              round = round)
-  }
+    }
 
   # Formatting results data ------------------------------------------------
-
-  # Remove targets with <3 models
+  # Remove targets with <n models
   results <- anti_join(results,
                        results |>
                          group_by(round, location, scenario_id,
