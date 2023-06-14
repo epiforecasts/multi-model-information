@@ -13,17 +13,12 @@ library(lubridate)
 library(purrr)
 library(ggplot2)
 source(here("code", "import-results.R"))
-source(here("code", "format-results.R"))
 source(here("code", "create-ensembles.R"))
 source(here("code", "score-samples.R"))
 local <- TRUE
 
-# Load samples from all models
-results <- import_results(round = 2, local = local)
-
-# Clean and include observed data where available
-results <- format_results(results = results,
-                          n_model_min = 3, local = local)
+# Load samples from all models, with observed data
+results <- import_projections(round = 2, local = local, n_model_min = 3)
 
 # Dates for ensemble creation
 latest_data <- max(subset(results, !is.na(obs))$target_end_date)

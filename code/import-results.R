@@ -1,4 +1,7 @@
-# Get all submitted csv files by Round
+# Get data: observed data and scenario projections
+# import_observed()
+# import_projections()
+#
 library(readr)
 library(stringr)
 library(purrr)
@@ -9,9 +12,44 @@ library(arrow)
 library(curl)
 library(readr)
 
-# Get results from local repo -----
-import_results <- function(round = 1,
-                           local = TRUE) {
+# Get observed data
+import_observed <- function(local = TRUE) {
+
+  if (local) { # load a local copy
+    obs <- read_csv(here("data", "obs.csv"))
+
+  } else {
+
+    # get raw JHU data
+    cases <- read_csv("https://raw.githubusercontent.com/covid19-forecast-hub-europe/covid19-forecast-hub-europe/main/data-truth/JHU/truth_JHU-Incident%20Cases.csv") |>
+      mutate(target_variable = "inc case")
+    deaths <- read_csv("https://raw.githubusercontent.com/covid19-forecast-hub-europe/covid19-forecast-hub-europe/main/data-truth/JHU/truth_JHU-Incident%20Deaths.csv") |>
+      mutate(target_variable = "inc death")
+    pop <- read_csv("https://raw.githubusercontent.com/covid19-forecast-hub-europe/covid19-forecast-hub-europe/main/data-locations/locations_eu.csv") |>
+      select(location, population)
+    # weekly incidence
+    obs <- bind_rows(cases, deaths) |>
+      mutate(year = epiyear(date),
+             week = epiweek(date)) |>
+      group_by(location, location_name,
+               target_variable,
+               year, week) |>
+      summarise(target_end_date = max(date),
+                value = sum(value, na.rm = TRUE)) |>
+      ungroup() |>
+      select(-year, -week) |>
+      left_join(pop) |>
+      mutate(model = "Observed")
+    write_csv(obs, here("data", "obs.csv"))
+  }
+
+  return(obs)
+}
+
+# Get and format projections from local repo -----
+import_projections <- function(round = 2,
+                           local = TRUE,
+                           n_model_min = 3) {
 
   if (local) {
     # if hub is cloned locally, get path to hub/data-processed
@@ -92,6 +130,41 @@ import_results <- function(round = 1,
                lubridate::weeks(horizon) - lubridate::days(1),
              round = round)
   }
+
+  # Formatting results data ------------------------------------------------
+
+  # Remove targets with <3 models
+  results <- anti_join(results,
+                       results |>
+                         group_by(round, location, scenario_id,
+                                  target_end_date, target_variable) |>
+                         summarise(models = n_distinct(model),
+                                   .groups = "drop") |>
+                         filter(models < n_model_min),
+                       by = c("round", "location", "scenario_id",
+                              "target_end_date", "target_variable")) |>
+    ungroup()
+
+  # Add observed data
+  obs <- import_observed(local = local)
+  results <- left_join(results,
+                       obs |>
+                         select(obs = value,
+                                location, target_variable, target_end_date),
+                       by = c("location", "target_variable", "target_end_date"))
+
+  # Add values per 100k population
+  results <- results |>
+    # get population size (from obs dataset)
+    left_join(obs |>
+                group_by(location, location_name, target_variable) |>
+                filter(target_end_date == min(target_end_date)) |>
+                select(location, target_variable,
+                       location_name, population),
+              by = c("location", "target_variable")) |>
+    # take value per 100k
+    mutate(value_100k = value / population * 100000,
+           obs_100k = obs / population * 100000)
 
   return(results)
 }
