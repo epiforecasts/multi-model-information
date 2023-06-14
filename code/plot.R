@@ -51,10 +51,10 @@ plot_ensemble_results <- function(ensembles, results,
                                       "Quantiles",
                                       "Samples",
                                       "Weighted samples"),
-                           labels = c("A. All samples",
-                                      "B. Quantile",
-                                      "C. Simulations",
-                                      "D. Weighted")),
+                           labels = c("i. All samples",
+                                      "ii. Quantile",
+                                      "iii. Simulations",
+                                      "iv. Weighted")),
            obs_100k = ifelse(model %in% c("Quantiles", "Samples"), NA, obs_100k))
 
   # Plot --------------------------------------------------------------
