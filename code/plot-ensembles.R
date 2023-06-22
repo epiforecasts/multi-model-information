@@ -75,7 +75,7 @@ plot_ensemble_results <- function(ensembles, results,
               alpha = 0.1) +
     # observed data as points
     geom_point(aes(y = obs_100k),
-               colour = "black", size = 0.6, show.legend = FALSE) +
+               colour = "grey20", size = 0.6, show.legend = FALSE) +
     # ----- Structure
     # facets
     facet_wrap(~ model,
