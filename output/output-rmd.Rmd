@@ -148,6 +148,7 @@ end_max <- results |>
 ```{r weekly-ensembles}
 # Create set of weekly ensembles with progressively increasing observed data
 source(here("code", "create-weekly-ensemble.R"))
+weekly_ensembles <- create_weekly_ensembles(results)
 ensembles <- weekly_ensembles$ensembles  
 weights <- weekly_ensembles$weights
 ```
@@ -198,7 +199,7 @@ weekly_ensemble_plot <- weekly_ensemble_plot |>
                colour = "grey20", size = 0.6,
                show.legend = FALSE) +
     # show start date of weighted forecasting
-    geom_vline(xintercept = min(forecast_dates),
+    geom_vline(xintercept = min(weekly_ensembles$forecast_date),
                lty = 2) +
     # ----- Structure
     # facets
@@ -221,10 +222,10 @@ weekly_ensemble_plot <- weekly_ensemble_plot |>
     theme(legend.position = "bottom",
           strip.background = element_blank())
 
-  ggsave(filename = "output/figure-3.jpg", height = 8, width = 8, 
+ggsave(filename = "output/figure-3.jpg", height = 8, width = 8, 
          plot = weekly_ensemble_plot)
   
-  weekly_ensemble_plot
+weekly_ensemble_plot
 ```
 
 Figure 1.iii shows an ensemble from equally weighted simulated trajectories - that is the same as a 52-week-ahead forecast conditioned on 0-weeks-observed data (relative to the start of the projection). Figure 1.iv shows a 25-week-ahead ensemble weighted by simulations' performance based on 25-weeks-observed data.
