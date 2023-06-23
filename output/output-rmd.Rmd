@@ -18,13 +18,16 @@ options(digits = 2)
 
 local <- TRUE # FALSE = download data from hub git remote, TRUE = use copy in this repo
 
+# import functions
+source(here("code", "import-results.R"))
+source(here("code", "create-ensembles.R"))
+
 # Prettier formatting -----
 # targets
-target_levels <- c("ES inc case", "BE inc case", "NL inc case", 
-                   "BE inc death", "NL inc death")
-target_labels <- c("ES cases", "BE cases", "NL cases", 
-                   "BE deaths", "NL deaths")
+target_levels <- c("BE inc case", "NL inc case", "ES inc case", "BE inc death", "NL inc death")
+target_labels <- c("Belgium cases", "Netherlands cases", "Spain cases", "Belgium deaths", "Netherlands deaths")
 names(target_levels) <- target_labels
+names(target_labels) <- target_levels
 
 # colours for scenarios
 scenario_colours <- c("A" = "#e66101",
@@ -39,21 +42,19 @@ scenario_colours <- c("A" = "#e66101",
 
 ```{r load-samples}
 # Load samples from all models together with observed data
-source(here("code", "import-results.R"))
 results <- import_projections(round = 2, local = local, n_model_min = 3) |> 
   mutate(target = ordered(x = paste(location, target_variable),
+                          levels = target_levels,
                           labels = target_labels))
 ```
 
-```{r create-ensembles, warning=FALSE}
-# Create three ensembles ("Sample", "Quantile", "Weighted")
-source(here("code", "create-ensembles.R"))
-truncate_weeks <- 2 # scoring evaluation against all data -2 weeks before now
-ensembles <- create_ensembles(results = results, 
-                              truncate_weeks = truncate_weeks,
+```{r create-simple-ensembles, warning=FALSE}
+# Create two simple ensembles ("Sample", "Quantile")
+simple_ensembles <- create_simple_ensembles(results = results, 
                               quantiles = c(0.01, 0.05, 0.25, 0.5, 
                                             0.75, 0.95, 0.99)) |> 
   mutate(target = ordered(x = paste(location, target_variable),
+                          levels = target_levels,
                           labels = target_labels))
 ```
 
@@ -61,22 +62,85 @@ ensembles <- create_ensembles(results = results,
 
 Figure 1
 
-```{r plot-ensembles, warning=FALSE, fig.height=8, fig.width=12}
-# Plot: All targets' trajectories over time and by ensemble
-source(here("code", "plot-ensembles.R"))
-plots <- purrr::map(target_levels,
-                    ~ plot_ensemble_results(ensembles, results, 
-                                            set_target = .x,
-                                            scenario_colours = scenario_colours))
-figure_1 <- wrap_plots(plots, 
-           ncol = length(plots), 
-           guides = "collect") &
-  theme(legend.position = "top")
+```{r plot-simple, warning=FALSE, fig.dim=c(8,12)}
+# Reshape data for plotting -----
+  # ensembles
+  plot_simple_ensembles <- simple_ensembles |>
+    pivot_wider(names_from = quantile) |>
+    mutate(median = q0.5) |>
+    select(-q0.5)
 
-# Save and print
-ggsave(filename = here("output", "figure-1.jpg"),
-       plot = figure_1, height = 8, width = 12)
-figure_1
+  # samples
+  plot_samples <- results |>
+    mutate(model_sample = paste(location, target_variable, scenario_id,
+                                model, sample,
+                                sep = "-"),
+           # relabel model to None
+           model = "None") |>
+    rename(q0.5 = value_100k) |>
+    select(location, target_variable,
+           target_end_date, scenario_id,
+           model, model_sample, q0.5)
+
+    # combine data and observations
+  plot_ensembles_samples <- bind_rows(plot_simple_ensembles, plot_samples) |>
+    left_join(distinct(results,
+                       location, target_variable,
+                       target_end_date, obs_100k),
+              by = c("location", "target_variable", "target_end_date"))
+
+  # Format for plotting -----------------------------------------------------
+  plot_ensembles_samples <- plot_ensembles_samples |>
+    # set order for facet rows
+    mutate(model = ordered(model,
+                           levels = c("None",
+                                      "Samples",
+                                      "Quantiles"),
+                           labels = c("i. All models' simulated trajectories",
+                                      "ii. Ensemble from trajectories",
+                                      "iii. Ensemble from models' quantiles")),
+           obs_100k = ifelse(model %in% c("Quantiles", "Samples"), NA, obs_100k))
+
+  # Plot --------------------------------------------------------------
+  plot_ensembles_samples <- plot_ensembles_samples |>
+    mutate(target = ordered(x = paste(location, target_variable),
+                          levels = target_levels,
+                          labels = target_labels)) |>
+    # filter(target == set_target) |>
+    ggplot(aes(x = target_end_date,
+               fill = scenario_id, col = scenario_id)) +
+    # ----- Geoms
+    # ensembles
+    geom_ribbon(aes(ymin = q0.01, ymax = q0.99),
+                alpha = 0.1, col = NA) +
+    geom_ribbon(aes(ymin = q0.25, ymax = q0.75),
+                alpha = 0.4, col = NA) +
+    geom_line(aes(y = median), size = 1) +
+    # model samples
+    geom_line(aes(y = q0.5, group = model_sample),
+              alpha = 0.1) +
+    # observed data as points
+    geom_point(aes(y = obs_100k),
+               colour = "grey20", size = 0.6, show.legend = FALSE) +
+    # ----- Structure
+    # facets
+    facet_grid(rows = vars(target), cols = vars(model),
+               scales = "free", switch = "y") +
+    # labels
+    labs(x = NULL, y = "Incidence per 100k",
+         colour = "Scenario", fill = "Scenario") +
+    # colours and scales
+    scale_colour_manual(values = scenario_colours,
+                        aesthetics = c("colour", "fill")) +
+    scale_x_date(breaks = "3 month", date_labels = "%b '%y") +
+    # theme
+    theme_bw() +
+    theme(legend.position = "bottom",
+          strip.background = element_blank(),
+          strip.placement = "outside",
+          strip.text = element_text(face = "bold", size = 10))
+
+plot_ensembles_samples
 ```
 
 #### Difference between uncertainty ranges
@@ -84,7 +148,7 @@ figure_1
 Figure 2
 
 ```{r width-ensembles, fig.width = 8}
-interval_ensembles <- ensembles |>
+interval_ensembles <- simple_ensembles |>
   mutate(quantile = as.numeric(as.character(sub("q0", "", quantile))),
          interval = round(2 * abs(0.5 - quantile), 2),
          type = if_else(quantile <= 0.5, "lower", "upper"))
@@ -114,74 +178,62 @@ width_plot <- width |>
   geom_point(aes(y = upper), alpha = 0.5) +
   scale_colour_brewer(palette = "Set1") +
   scale_fill_brewer(palette = "Set1") +
-  labs(y = "Mean lower and upper interval bound per 100k",
-       x = "Interval width",
+  labs(y = "Mean lower and upper incidence per 100k",
+       x = "Interval width around median",
        fill = "Ensemble data source",
        colour = "Ensemble data source") +
-  facet_wrap(~target, nrow = 1,
-             scales = "free_y") +
+  facet_grid(rows = vars(target),
+             scales = "free_y", switch = "y") +
   theme_bw() +
   theme(legend.position = "bottom",
-        strip.background = element_blank())
-
-ggsave(filename = here("output", "figure-2.jpg"),
-       plot = width_plot, width = 8)
+        strip.background = element_blank(),
+        strip.placement = "outside",
+        strip.text = element_text(face = "bold", size = 10))
 
 width_plot
 ```
 
-```{r end-projection-uncertainty}
-proj_end <- ensembles |> 
-  filter(scenario_id == "Weighted") |> 
-  group_by(location, target_variable) |> 
-  filter(target_end_date == max(target_end_date) & 
-           quantile == "q0.99") |> 
-  filter(value == max(value))
-
-end_max <- results |> 
-  group_by(location, target_variable) |>
-  filter(target_end_date == max(target_end_date)) |> 
-  filter(value_100k == max(value_100k))
-```
+Figure 2 shows the mean lower and upper incidence per 100,000 population, at increasing distances from the median (interval width). The median estimate is at 0 on the x-axis, and an interval width at 0.98 represents the 1%-99% credibility interval around the median. With increasing levels of uncertainty, the distances between the lower and upper bounds are reduced in an ensemble created from quantile summaries of model simulations, compared to sampled simulated trajectories.
 
 #### Conditioning samples on an increasing amount of data
-```{r weekly-ensembles}
+```{r weekly-ensembles, warning=FALSE}
 # Create set of weekly ensembles with progressively increasing observed data
-source(here("code", "create-weekly-ensemble.R"))
-weekly_ensembles <- create_weekly_ensembles(results)
-ensembles <- weekly_ensembles$ensembles  
-weights <- weekly_ensembles$weights
+weekly <- create_weekly_ensembles(results)
 ```
 
-[Text:]
+Text:
 
-- When weighted by inverse MAE, no sample received more than `r max(weights$weight)*100`% weight (among n=`r nrow(weights)/length(unique(weights$target))` samples for each target).
+- When weighted by inverse MAE, no sample received more than `r max(weekly$weights$weight)*100`% weight (among n=`r nrow(weekly$weights)/length(unique(weekly$weights$target))` samples for each target).
 
 
 Figure 3. Weighted ensemble forecasts of incidence 4, 8, and 16 weeks ahead of available data, with available data increasing weekly over time. Showing median (lines) & 50% quantiles (shaded ribbons). Each sample trajectory started from 30 July 2022 and was weighted using its inverse mean absolute error against all available data. Consecutive weekly forecasts were created from updating weights with each week's observed data. We started with 4 weeks observed data and then created consecutive forecasts at each week, so that weights update with increasing weekly observed data becoming available. This meant the earliest forecast is an ensemble of sample trajectories from the 27 August 2022 (vertical dashed line), using 4 weeks' observed data to weight sample trajectories, and gives a 4 week ahead forecast for the 24 September (start of purple ribbon), an 8 week ahead forecast for the 22 October (start of pink ribbon), and 16 week forecast from 17 December 2022 (start of yellow ribbon). 
 
-```{r plot-weekly-ensembles, fig.dim=c(10,10)}
+```{r plot-weekly-ensembles, warning=FALSE, fig.dim=c(8,8)}
 # Plot -------------------------------------------
-  # set up data for plotting
-  obs_data <- results |>
+# set up data for plotting
+obs_data <- results |>
     distinct(location, target_variable, target_end_date, obs_100k)
-  # select only some horizons
-weekly_ensemble_plot <- ensembles |>
-    filter(horizon %in% c(4,8,16)) |>
-    full_join(obs_data, by = c("location", "target_variable", "target_end_date"))
 
+weekly_ensemble_plot <- weekly$ensembles |>
+    # select only some horizons
+    filter(horizon %in% c(4,8,16)) |>
+  # add observed data
+    full_join(obs_data, by = c("location", "target_variable", "target_end_date")) |> 
   # shape for plotting
-  weekly_ensemble_plot <- weekly_ensemble_plot |>
     pivot_wider(names_from = quantile) |>
     mutate(median = q0.5) |>
     select(-q0.5) |>
     mutate(forecast_date = as.Date(forecast_date),
-           target = factor(paste(location,
-                                 gsub("inc ", "", target_variable))),
+           target = ordered(x = paste(location, target_variable),
+                            levels = target_levels,
+                            labels = target_labels),
            scenario_id = factor(scenario_id),
-           horizon_f = factor(horizon, levels = c(16,8,4), 
+           horizon_f = factor(horizon, 
+                              levels = c(16,8,4), 
                               labels = c("16 weeks ago", "8 weeks ago", "4 weeks ago")))
-
+horizon_cols <- c("16 weeks ago" = "#a1dab4", 
+                  "8 weeks ago" = "#41b6c4", 
+                  "4 weeks ago" = "#225ea8")
 # Plot
 weekly_ensemble_plot <- weekly_ensemble_plot |>
     ggplot(aes(x = target_end_date,
@@ -192,44 +244,49 @@ weekly_ensemble_plot <- weekly_ensemble_plot |>
     # ----- Geoms
     # ensembles
     geom_ribbon(aes(ymin = q0.25, ymax = q0.75),
-                col = NA, alpha = 0.4) +
-    geom_line(aes(y = median), lwd = 1) +
+                col = NA,
+                alpha = 0.6) +
+    geom_line(aes(y = median), alpha = 0.5, lwd = 1) +
     # observed data as points
     geom_point(aes(y = obs_100k),
                colour = "grey20", size = 0.6,
                show.legend = FALSE) +
     # show start date of weighted forecasting
-    geom_vline(xintercept = min(weekly_ensembles$forecast_date),
+    geom_vline(xintercept = as.Date("2022-08-27"),
                lty = 2) +
     # ----- Structure
     # facets
     facet_grid(rows = vars(target),
-               scales = "free") +
+               scales = "free", switch = "y") +
     # labels
     labs(x = NULL, y = "Incidence per 100k",
          fill = "Conditioned on data up to",
          col = "Conditioned on data up to") +
     # scales
-    scale_x_date(limits = c(min(results$target_end_date), NA),
+    scale_x_date(limits = c(min(results$target_end_date), as.Date("2023-03-11")),
                  breaks = "1 month", date_labels = "%b '%y") +
-    scale_colour_viridis_d(option = "F",
-                           begin = 0.2, end = 0.8,
-                           alpha = 0.5,
-                           direction = -1,
-                           aesthetics = c("fill", "colour")) +
+    scale_colour_manual(values = horizon_cols,
+                        aesthetics = c("fill", "colour")) +
     # theme
     theme_bw() +
     theme(legend.position = "bottom",
-          strip.background = element_blank())
-
-ggsave(filename = "output/figure-3.jpg", height = 8, width = 8, 
-         plot = weekly_ensemble_plot)
+          strip.background = element_blank(),
+          strip.placement = "outside",
+          strip.text = element_text(face = "bold", size = 10))
   
 weekly_ensemble_plot
 ```
 
-Figure 1.iii shows an ensemble from equally weighted simulated trajectories - that is the same as a 52-week-ahead forecast conditioned on 0-weeks-observed data (relative to the start of the projection). Figure 1.iv shows a 25-week-ahead ensemble weighted by simulations' performance based on 25-weeks-observed data.
-
 We show varying lengths of forecasts repeatedly conditioned on simulated trajectories' performance against each week's data. We start with performance from 4-weeks-observed data and use this to weight an ensemble that forecasts 4, 8, or 16 weeks ahead into the future.
 
-
+```{r save-plots}
+ggsave(filename = here("output", "figure-1.jpg"),
+       plot = plot_ensembles_samples, 
+       width = 10, height = 8)
+ggsave(filename = here("output", "figure-2.jpg"),
+       plot = width_plot, 
+       width = 5, height = 8)
+ggsave(filename = here("output", "figure-3.jpg"), 
+       plot = weekly_ensemble_plot,
+       width = 6, height = 8)
+```
