@@ -1,0 +1,27 @@
+---
+title: "Round 2: contributing teams"
+output: html_document
+---
+
+Modelling teams were asked to give a short description of their methods, among other metadata. 
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+library(here)
+library(dplyr)
+library(purrr)
+source(here("code", "import-results.R"))
+
+results <- import_projections(round = 2, local = T, n_model_min = 3) 
+models <- unique(results$model)
+
+mtd <- map_dfr(models,
+           ~ yaml::read_yaml(paste0("https://raw.githubusercontent.com/covid19-forecast-hub-europe/covid19-scenario-hub-europe/main/model-metadata/", .x, ".yml")) |> 
+             unlist()) |> 
+  select(Team = team_name, Model = model_abbr, Methods = methods)
+
+knitr::kable(mtd)
+```
+See also: 
+
+- Full model metadata, at: https://github.com/covid19-forecast-hub-europe/covid19-scenario-hub-europe/tree/main/model-metadata
+- Information about each model's assumptions for Round 2, at: https://github.com/covid19-forecast-hub-europe/covid19-scenario-hub-europe/tree/main/model-abstracts/2022-07-24 
