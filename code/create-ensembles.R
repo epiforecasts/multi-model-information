@@ -17,7 +17,7 @@ create_simple_ensembles <- function(results,
       n = n(),
       value = quantile(value_100k, quantiles),
       quantile = paste0("q", quantiles),
-      model = "Samples",
+      model = "Trajectories",
       .groups = "drop"
     )
 

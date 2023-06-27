@@ -83,26 +83,26 @@ Figure 1
            model, model_sample, q0.5)
 
     # combine data and observations
-  plot_ensembles_samples <- bind_rows(plot_simple_ensembles, plot_samples) |>
+  ensembles_samples_plot <- bind_rows(plot_simple_ensembles, plot_samples) |>
     left_join(distinct(results,
                        location, target_variable,
                        target_end_date, obs_100k),
               by = c("location", "target_variable", "target_end_date"))
 
   # Format for plotting -----------------------------------------------------
-  plot_ensembles_samples <- plot_ensembles_samples |>
+  ensembles_samples_plot <- ensembles_samples_plot |>
     # set order for facet rows
     mutate(model = ordered(model,
                            levels = c("None",
-                                      "Samples",
+                                      "Trajectories",
                                       "Quantiles"),
                            labels = c("i. All models' simulated trajectories",
                                       "ii. Ensemble from trajectories",
                                       "iii. Ensemble from models' quantiles")),
-           obs_100k = ifelse(model %in% c("Quantiles", "Samples"), NA, obs_100k))
+           obs_100k = ifelse(model %in% c("Quantiles", "Trajectories"), NA, obs_100k))
 
   # Plot --------------------------------------------------------------
-  plot_ensembles_samples <- plot_ensembles_samples |>
+  ensembles_samples_plot <- ensembles_samples_plot |>
     mutate(target = ordered(x = paste(location, target_variable),
                           levels = target_levels,
                           labels = target_labels)) |>
@@ -148,25 +148,27 @@ plot_ensembles_samples
 Figure 2
 
 ```{r width-ensembles, fig.width = 8}
-interval_ensembles <- simple_ensembles |>
+get_interval_widths <- function(ensemble) {
+  interval_ensembles <- ensemble |>
   mutate(quantile = as.numeric(as.character(sub("q0", "", quantile))),
          interval = round(2 * abs(0.5 - quantile), 2),
          type = if_else(quantile <= 0.5, "lower", "upper"))
 duplicate_median <- interval_ensembles |>
   filter(quantile == 0.5) |>
   mutate(type = "upper")
-
 width <- interval_ensembles |>
   bind_rows(duplicate_median) |>
-  filter(scenario_id != "Weighted") |>
   select(-quantile) |>
   pivot_wider(names_from = "type") |>
   # Average across all scenarios and dates
-  group_by(round, target, model, interval) |>
+  group_by(target, model, interval) |>
   summarise(upper = mean(upper),
             lower = mean(lower),
             .groups = "drop")
+return(width)
+}
 
+width <- get_interval_widths(simple_ensembles)
 width_plot <- width |>
   ggplot(aes(x = interval,
              ymin = lower, ymax = upper,
@@ -193,47 +195,45 @@ width_plot <- width |>
 width_plot
 ```
 
-Figure 2 shows the mean lower and upper incidence per 100,000 population, at increasing distances from the median (interval width). The median estimate is at 0 on the x-axis, and an interval width at 0.98 represents the 1%-99% credibility interval around the median. With increasing levels of uncertainty, the distances between the lower and upper bounds are reduced in an ensemble created from quantile summaries of model simulations, compared to sampled simulated trajectories.
 
 #### Conditioning samples on an increasing amount of data
 ```{r weekly-ensembles, warning=FALSE}
 # Create set of weekly ensembles with progressively increasing observed data
 weekly <- create_weekly_ensembles(results)
+weekly_ensembles <- weekly$ensembles |>
+  filter(horizon %in% c(4,8,16)) |> 
+  mutate(horizon_f = factor(horizon, 
+                       levels = c(16,8,4), 
+                       labels = c("16 weeks ago", "8 weeks ago", "4 weeks ago")),
+         target = ordered(x = paste(location, target_variable),
+                            levels = target_levels,
+                            labels = target_labels))
+         
+horizon_cols <- c("16 weeks ago" = "#a1dab4", 
+                  "8 weeks ago" = "#41b6c4", 
+                  "4 weeks ago" = "#225ea8")
 ```
 
-Text:
+We created ensembles using between 4 and `r length(unique(weekly[["weights"]][["forecast_date"]]))` weeks' observed data.
 
-- When weighted by inverse MAE, no sample received more than `r max(weekly$weights$weight)*100`% weight (among n=`r nrow(weekly$weights)/length(unique(weekly$weights$target))` samples for each target).
-
-
-Figure 3. Weighted ensemble forecasts of incidence 4, 8, and 16 weeks ahead of available data, with available data increasing weekly over time. Showing median (lines) & 50% quantiles (shaded ribbons). Each sample trajectory started from 30 July 2022 and was weighted using its inverse mean absolute error against all available data. Consecutive weekly forecasts were created from updating weights with each week's observed data. We started with 4 weeks observed data and then created consecutive forecasts at each week, so that weights update with increasing weekly observed data becoming available. This meant the earliest forecast is an ensemble of sample trajectories from the 27 August 2022 (vertical dashed line), using 4 weeks' observed data to weight sample trajectories, and gives a 4 week ahead forecast for the 24 September (start of purple ribbon), an 8 week ahead forecast for the 22 October (start of pink ribbon), and 16 week forecast from 17 December 2022 (start of yellow ribbon). 
 
 ```{r plot-weekly-ensembles, warning=FALSE, fig.dim=c(8,8)}
 # Plot -------------------------------------------
 # set up data for plotting
 obs_data <- results |>
-    distinct(location, target_variable, target_end_date, obs_100k)
+    distinct(target, target_end_date, obs_100k)
 
-weekly_ensemble_plot <- weekly$ensembles |>
-    # select only some horizons
-    filter(horizon %in% c(4,8,16)) |>
+weekly_ensemble_plot <- weekly_ensembles |>
   # add observed data
-    full_join(obs_data, by = c("location", "target_variable", "target_end_date")) |> 
+    full_join(obs_data, 
+              by = c("target", "target_end_date")) |> 
   # shape for plotting
     pivot_wider(names_from = quantile) |>
     mutate(median = q0.5) |>
     select(-q0.5) |>
     mutate(forecast_date = as.Date(forecast_date),
-           target = ordered(x = paste(location, target_variable),
-                            levels = target_levels,
-                            labels = target_labels),
-           scenario_id = factor(scenario_id),
-           horizon_f = factor(horizon, 
-                              levels = c(16,8,4), 
-                              labels = c("16 weeks ago", "8 weeks ago", "4 weeks ago")))
-horizon_cols <- c("16 weeks ago" = "#a1dab4", 
-                  "8 weeks ago" = "#41b6c4", 
-                  "4 weeks ago" = "#225ea8")
+           scenario_id = factor(scenario_id))
+
 # Plot
 weekly_ensemble_plot <- weekly_ensemble_plot |>
     ggplot(aes(x = target_end_date,
@@ -243,9 +243,9 @@ weekly_ensemble_plot <- weekly_ensemble_plot |>
     )) +
     # ----- Geoms
     # ensembles
-    geom_ribbon(aes(ymin = q0.25, ymax = q0.75),
+    geom_ribbon(aes(ymin = q0.01, ymax = q0.99),
                 col = NA,
-                alpha = 0.6) +
+                alpha = 0.5) +
     geom_line(aes(y = median), alpha = 0.5, lwd = 1) +
     # observed data as points
     geom_point(aes(y = obs_100k),
@@ -277,16 +277,67 @@ weekly_ensemble_plot <- weekly_ensemble_plot |>
 weekly_ensemble_plot
 ```
 
-We show varying lengths of forecasts repeatedly conditioned on simulated trajectories' performance against each week's data. We start with performance from 4-weeks-observed data and use this to weight an ensemble that forecasts 4, 8, or 16 weeks ahead into the future.
+
+```{r supplement-weighted-width}
+# look at interval width of ensembles over comparable time periods
+# as figure 2, where model is conditioning on different periods of data
+earliest_target <- filter(weekly_ensembles, horizon == 16) |> 
+  pull(target_end_date) |> min()
+latest_target <- filter(weekly_ensembles, horizon == 4) |> 
+  pull(target_end_date) |> max()
+
+weekly_widths <- weekly_ensembles |> 
+  mutate(model = horizon_f) |> 
+  filter(between(target_end_date, earliest_target, latest_target)) |> 
+  get_interval_widths()
+
+weekly_width_upper <- weekly_widths |> 
+  select(-lower) |> 
+  group_by(target, interval) |> 
+  pivot_wider(names_from = model, values_from = upper) |> 
+  mutate(diff = (`4 weeks ago` - `16 weeks ago`)/`16 weeks ago`)
+
+caption <- "Figure SI1. Mean central prediction intervals between 17 December 2022 and 8 April 2023 of ensembles conditioned on varying amounts of data. Weights were based on each trajectory's inverse mean absolute error, and were updated with each week of observed data to create consecutive weighted ensembles for all time horizons. We compare the mean interval width for projections at 4, 8, and 16 weeks ahead (overlapping between December and April). The median estimate has 0 interval width (x-axis), with uncertainty increasing until an interval width at 0.98 represents the 1%-99% credibility interval around the median. Conditioning on more recent data shows reduced uncertainty at the upper 0.98 interval across five different projection targets."
+
+weekly_width_plot <- weekly_widths |>
+  ggplot(aes(x = interval,
+             ymin = lower, ymax = upper,
+             group = model,
+             colour = model, fill = model)) +
+  geom_ribbon(alpha = 0.25) +
+  geom_linerange(alpha = 0.25) +
+  geom_point(aes(y = lower), alpha = 0.5) +
+  geom_point(aes(y = upper), alpha = 0.5) +
+  scale_colour_manual(values = horizon_cols, 
+                      aesthetics = c("colour", "fill")) +
+  labs(y = "Mean lower and upper incidence per 100k",
+       x = "Interval width around median",
+       fill = "Conditioned on data up to",
+       colour = "Conditioned on data up to",
+       caption = stringr::str_wrap(caption, width = 100)) +
+  facet_grid(rows = vars(target),
+             scales = "free_y", switch = "y") +
+  theme_bw() +
+  theme(legend.position = "bottom",
+        strip.background = element_blank(),
+        strip.placement = "outside",
+        strip.text = element_text(face = "bold", size = 10))
+
+weekly_width_plot
+```
+
 
 ```{r save-plots}
 ggsave(filename = here("output", "figure-1.jpg"),
-       plot = plot_ensembles_samples, 
+       plot = ensembles_samples_plot, 
        width = 10, height = 8)
 ggsave(filename = here("output", "figure-2.jpg"),
        plot = width_plot, 
        width = 5, height = 8)
 ggsave(filename = here("output", "figure-3.jpg"), 
        plot = weekly_ensemble_plot,
+       width = 6, height = 8)
+ggsave(filename = here("output", "figure-S1.pdf"),
+       plot = weekly_width_plot, 
        width = 6, height = 8)
 ```
