@@ -1,6 +1,5 @@
 ---
 title: "Aggregating predictions from an SIRS model"
-bibliography: bibfile.bib
 output: 
   rmarkdown::html_vignette
 vignette: >
@@ -21,7 +20,7 @@ knitr::opts_chunk$set(
 
 
 
-fig_path <- "/Users/eah394/Documents/GitHub/aggregation_methods/figures/general_sir/"
+fig_path <- here::here()
 ```
 
 This vignette implements the first case study from [@EAH-ms]. We simulate a multi-model effort to evaluate the performance of various aggregation methods when applied to distributions of public health outcomes. 
@@ -251,7 +250,7 @@ ggsave(paste0(fig_path, "param_distributions.pdf"),p_params, width = 8, height =
 ```
 
 ```{r plot-setup, include = FALSE}
-# defnie base text size
+# define base text size
 bs <- 10
 
 # define facet labels

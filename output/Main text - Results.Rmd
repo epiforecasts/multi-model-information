@@ -22,12 +22,20 @@ local <- TRUE # FALSE = download data from hub git remote, TRUE = use copy in th
 source(here("code", "import-results.R"))
 source(here("code", "create-ensembles.R"))
 
+# Quantiles for vincent & LOP ensembles (standard hub submission format)
+quantiles <- c(0.01, 0.025, 
+               seq(0.05, 0.95, by = 0.05), 
+               0.975, 0.99)
+
 # Prettier formatting -----
 # targets
 target_levels <- c("BE inc case", "NL inc case", "ES inc case", "BE inc death", "NL inc death")
 target_labels <- c("Belgium cases", "Netherlands cases", "Spain cases", "Belgium deaths", "Netherlands deaths")
 names(target_levels) <- target_labels
 names(target_labels) <- target_levels
+
+# Quantiles for plotting
+quantile_plotting <- c(0.01, 0.05, 0.25, 0.5, 0.75, 0.95, 0.99)
 
 # colours for scenarios
 scenario_colours <- c("A" = "#e66101",
@@ -42,7 +50,8 @@ scenario_colours <- c("A" = "#e66101",
 
 ```{r load-samples}
 # Load samples from all models together with observed data
-results <- import_projections(round = 2, local = local, n_model_min = 3) |> 
+results <- import_projections(round = 2, n_model_min = 3,
+                              local = local) |> 
   mutate(target = ordered(x = paste(location, target_variable),
                           levels = target_levels,
                           labels = target_labels))
@@ -51,8 +60,7 @@ results <- import_projections(round = 2, local = local, n_model_min = 3) |>
 ```{r create-simple-ensembles, warning=FALSE}
 # Create two simple ensembles ("Sample", "Quantile")
 simple_ensembles <- create_simple_ensembles(results = results, 
-                              quantiles = c(0.01, 0.05, 0.25, 0.5, 
-                                            0.75, 0.95, 0.99)) |> 
+                                            quantiles = quantiles) |> 
   mutate(target = ordered(x = paste(location, target_variable),
                           levels = target_levels,
                           labels = target_labels))
@@ -66,6 +74,7 @@ Figure 1
 # Reshape data for plotting -----
   # ensembles
   plot_simple_ensembles <- simple_ensembles |>
+    filter(quantile %in% quantile_plotting)
     pivot_wider(names_from = quantile) |>
     mutate(median = q0.5) |>
     select(-q0.5)

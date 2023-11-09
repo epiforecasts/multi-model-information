@@ -49,8 +49,8 @@ import_observed <- function(local = TRUE) {
 
 # Get and format projections from local repo -----
 import_projections <- function(round = 2,
-                           local = TRUE,
-                           n_model_min = 3) {
+                               n_model_min = 3,
+                               local = TRUE) {
 
   if (local) {
     # if hub is cloned locally, get path to hub/data-processed
@@ -86,7 +86,7 @@ import_projections <- function(round = 2,
     results <- map(.x = models$file,
                    ~ safely_read(.x))
     names(results) <- models$model
-    results <- transpose(results)
+    results <- list_transpose(results)
     results <- bind_rows(results$result, .id = "model") |>
       mutate(round = round)
 
