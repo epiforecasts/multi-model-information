@@ -35,7 +35,7 @@ names(target_levels) <- target_labels
 names(target_labels) <- target_levels
 
 # Quantiles for plotting
-quantile_plotting <- c(0.01, 0.05, 0.25, 0.5, 0.75, 0.95, 0.99)
+quantile_plotting <- paste0("q", c(0.01, 0.05, 0.25, 0.5, 0.75, 0.95, 0.99))
 
 # colours for scenarios
 scenario_colours <- c("A" = "#e66101",
@@ -60,10 +60,18 @@ results <- import_projections(round = 2, n_model_min = 3,
 ```{r create-simple-ensembles, warning=FALSE}
 # Create two simple ensembles ("Sample", "Quantile")
 simple_ensembles <- create_simple_ensembles(results = results, 
-                                            quantiles = quantiles) |> 
-  mutate(target = ordered(x = paste(location, target_variable),
+                                            quantiles = quantiles)
+# Create linear pool ensemble
+linear_pool_ensemble <- create_lop_ensemble(results = results,
+                                            quantiles = quantiles)
+ensembles <- bind_rows(simple_ensembles, linear_pool_ensemble) |> 
+  # Round values to integers (LOP produces decimals)
+  mutate(value = round(value, digits = 0),
+         # organise targets
+         target = ordered(x = paste(location, target_variable),
                           levels = target_levels,
-                          labels = target_labels))
+                          labels = target_labels)) |> 
+  select(-c(n, output_type))
 ```
 
 #### Comparison of all ensembles
@@ -73,8 +81,8 @@ Figure 1
 ```{r plot-simple, warning=FALSE, fig.dim=c(8,12)}
 # Reshape data for plotting -----
   # ensembles
-  plot_simple_ensembles <- simple_ensembles |>
-    filter(quantile %in% quantile_plotting)
+  plot_ensembles <- ensembles |>
+    filter(quantile %in% quantile_plotting) |> 
     pivot_wider(names_from = quantile) |>
     mutate(median = q0.5) |>
     select(-q0.5)
@@ -84,15 +92,14 @@ Figure 1
     mutate(model_sample = paste(location, target_variable, scenario_id,
                                 model, sample,
                                 sep = "-"),
-           # relabel model to None
-           model = "None") |>
+           model = "None") |> # relabel model to None
     rename(q0.5 = value_100k) |>
     select(location, target_variable,
            target_end_date, scenario_id,
            model, model_sample, q0.5)
 
-    # combine data and observations
-  ensembles_samples_plot <- bind_rows(plot_simple_ensembles, plot_samples) |>
+  # combine data and observations
+  ensembles_samples_plot <- bind_rows(plot_ensembles, plot_samples) |>
     left_join(distinct(results,
                        location, target_variable,
                        target_end_date, obs_100k),
@@ -104,14 +111,19 @@ Figure 1
     mutate(model = ordered(model,
                            levels = c("None",
                                       "Trajectories",
+                                      "Linear pool",
                                       "Quantiles"),
                            labels = c("i. All models' simulated trajectories",
                                       "ii. Ensemble from trajectories",
+                                      "iv. Linear pool ensemble",
                                       "iii. Ensemble from models' quantiles")),
-           obs_100k = ifelse(model %in% c("Quantiles", "Trajectories"), NA, obs_100k))
+      # avoid overplotting observed data
+           obs_100k = ifelse(model %in% c("Quantiles", 
+                                          "Trajectories", "Linear pool"), 
+                             NA, obs_100k))
 
   # Plot --------------------------------------------------------------
-  ensembles_samples_plot <- ensembles_samples_plot |>
+  plot_ensembles_samples <- ensembles_samples_plot |>
     mutate(target = ordered(x = paste(location, target_variable),
                           levels = target_levels,
                           labels = target_labels)) |>
@@ -150,6 +162,7 @@ Figure 1
           strip.text = element_text(face = "bold", size = 10))
 
 plot_ensembles_samples
+ggsave(filename = here("output", "fig1-rev.pdf"), width=15, height = 10)
 ```
 
 #### Difference between uncertainty ranges
@@ -177,7 +190,7 @@ width <- interval_ensembles |>
 return(width)
 }
 
-width <- get_interval_widths(simple_ensembles)
+width <- get_interval_widths(ensembles)
 width_plot <- width |>
   ggplot(aes(x = interval,
              ymin = lower, ymax = upper,
