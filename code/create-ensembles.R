@@ -6,7 +6,6 @@ library(tidyr)
 # local <- TRUE
 # results <- import_projections(round = 2, local = local, n_model_min = 3)
 
-
 # Create ensembles from raw samples and from quantiles of each model ----------
 create_simple_ensembles <- function(results,
                                     quantiles = c(0.01, 0.025,
@@ -20,8 +19,7 @@ create_simple_ensembles <- function(results,
       n = n(),
       value = quantile(value_100k, quantiles),
       quantile = paste0("q", quantiles),
-      model = "Trajectories",
-      .groups = "drop"
+      model = "Trajectories"
     )
 
   # Create ensemble of quantile-summarised-samples -----
@@ -31,8 +29,7 @@ create_simple_ensembles <- function(results,
              model) |>
     reframe(
       value = quantile(value_100k, quantiles),
-      quantile = paste0("q", quantiles),
-      .groups = "drop"
+      quantile = paste0("q", quantiles)
     ) |>
     # ----- take median of each quantile
     group_by(round, location, target_variable, target_end_date, scenario_id,
@@ -40,8 +37,7 @@ create_simple_ensembles <- function(results,
     summarise(
       n = n(),
       value = median(value),
-      model = "Quantiles",
-      .groups = "drop"
+      model = "Quantiles"
     )
 
   # Combine -----
@@ -58,32 +54,27 @@ create_lop_ensemble <- function(results,
                                               seq(0.05, 0.95, by = 0.05),
                                               0.975, 0.99)) {
   # ----- take quantiles from models
-  ensemble_quantile <- results |>
+  model_quantiles <- results |>
     group_by(round, location, target_variable, target_end_date, scenario_id,
              model) |>
     reframe(
       value = quantile(value_100k, quantiles),
-      quantile = paste0("q", quantiles),
-      q = names(value),
+      output_type_id = quantiles,
     ) |>
-    group_by(round, location, target_variable, target_end_date, scenario_id,
-             model) |>
-    nest()
+    rename(model_id = model) |>
+    mutate(output_type = "quantile")
 
-  ens_nest <- ensemble_quantile$data
-  data <- ens_nest[[1]]
-  data <- data$value
+  # ----- create linear pool (quantiles; interpolate; take quantiles)
+  lp_from_qs <- hubEnsembles::linear_pool(model_quantiles)
+  lp_from_qs <- lp_from_qs |>
+    rename(quantile = output_type_id,
+           model = model_id) |>
+    mutate(quantile = paste0("q", quantile),
+           model = "Linear pool",
+           # Round values to integers
+           value = round(value, digits = 0))
 
-  # ----- interpolate (method as in Howerton et al 2023)
-  interpolate <- function() {
-  data_interp <- approx(x = data, y = quantiles,
-                        xout = NA,
-                        method = "linear",
-                        ties = "mean", rule = 2)
-  data_return <- tibble::tibble(value = data_interp$x,
-                                quantile = data_interp$y)
-  }
-
+  return(lp_from_qs)
 }
 
 # Weekly ensemble of progressively MAE weighted samples -------------------
@@ -135,7 +126,6 @@ create_weekly_ensembles <- function(results) {
                            quantile = paste0("q", quantiles),
                            model = "Samples",
                            scenario_id = "Weighted",
-                           .groups = "drop"
                          ),
                        .id = "forecast_date") |>
     ungroup()
