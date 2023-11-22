@@ -70,9 +70,7 @@ create_lop_ensemble <- function(results,
     rename(quantile = output_type_id,
            model = model_id) |>
     mutate(quantile = paste0("q", quantile),
-           model = "Linear pool",
-           # Round values to integers
-           value = round(value, digits = 0))
+           model = "Linear pool")
 
   return(lp_from_qs)
 }
