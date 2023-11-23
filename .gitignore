@@ -49,3 +49,6 @@ po/*~
 rsconnect/
 .DS_Store
 .DS_Store
+
+# if we don't want to store them in the repo
+data/*.parquet

@@ -16,7 +16,7 @@ knitr::opts_chunk$set(eval = TRUE, echo = FALSE,
                       eval.after = "fig.cap")
 options(digits = 2)
 
-local <- TRUE # FALSE = download data from hub git remote, TRUE = use copy in this repo
+update <- FALSE # FALSE = re-download data from hub git remote, TRUE = use copy in this repo if it exists
 
 # import functions
 source(here("code", "import-results.R"))
@@ -42,7 +42,7 @@ scenario_colours <- c("A" = "#e66101",
 
 ```{r load-samples}
 # Load samples from all models together with observed data
-results <- import_projections(round = 2, local = local, n_model_min = 3) |> 
+results <- import_projections(round = 2, update = update, n_model_min = 3) |>
   mutate(target = ordered(x = paste(location, target_variable),
                           levels = target_levels,
                           labels = target_labels))
