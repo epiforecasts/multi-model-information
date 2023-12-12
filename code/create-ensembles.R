@@ -113,20 +113,38 @@ create_weekly_ensembles <- function(results) {
 
   # Ensemble weighted samples for each week of results -----
   message("Creating ensembles from progressively scored samples")
-  quantiles <- c(0.01, 0.25, 0.5, 0.75, 0.99)
+  quantiles <- c(0.01, 0.025,
+                 seq(0.05, 0.95, by = 0.05),
+                 0.975, 0.99)
   ensembles <- map_dfr(results_scored,
                        ~ .x |>
                          group_by(location, target_variable, target_end_date) |>
-                         reframe(value = cNORM::weighted.quantile.harrell.davis(
-                           x = value_100k,
-                           probs = quantiles,
-                           weights = weight),
+                         reframe(
+                           value = cNORM::weighted.quantile.harrell.davis(
+                             x = value_100k,
+                             probs = quantiles,
+                             weights = weight),
                            quantile = paste0("q", quantiles),
-                           model = "Samples",
+                           model = "Trajectories",
                            scenario_id = "Weighted",
                          ),
                        .id = "forecast_date") |>
     ungroup()
+
+  # Add an unweighted ensemble to use as a baseline for evaluation
+  ensembles_unweighted <- map_dfr(results_scored,
+                       ~ .x |>
+                         group_by(location, target_variable, target_end_date) |>
+                         reframe(
+                           value = quantile(value_100k, quantiles),
+                           quantile = paste0("q", quantiles),
+                           model = "Trajectories unweighted",
+                           scenario_id = "Unweighted",
+                         ),
+                       .id = "forecast_date") |>
+    ungroup()
+
+  ensembles <- bind_rows(ensembles, ensembles_unweighted)
 
   # only keep forecasts for specified horizons
   ensembles <- ensembles |>
