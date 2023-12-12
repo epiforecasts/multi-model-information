@@ -9,6 +9,7 @@ library(here)
 library(dplyr)
 library(tidyr)
 library(purrr)
+library(scoringutils)
 library(ggplot2)
 library(patchwork)
 knitr::opts_chunk$set(eval = TRUE, echo = FALSE,
@@ -219,50 +220,52 @@ width_plot
 
 
 #### Conditioning samples on an increasing amount of data
+
+We created ensembles using between 4 and `r length(unique(weekly[["weights"]][["forecast_date"]]))` weeks' observed data.
+
 ```{r weekly-ensembles, warning=FALSE}
 # Create set of weekly ensembles with progressively increasing observed data
 weekly <- create_weekly_ensembles(results)
 weekly_ensembles <- weekly$ensembles |>
-  filter(horizon %in% c(4,8,16)) |> 
-  mutate(horizon_f = factor(horizon, 
-                       levels = c(16,8,4), 
-                       labels = c("16 weeks ago", "8 weeks ago", "4 weeks ago")),
+  filter(horizon %in% c(-4, 0,4,8,16)) |> 
+  mutate(weighting = ifelse(scenario_id == "Unweighted", "Unweighted", 
+                            paste0(horizon, " weeks ago")),
          target = ordered(x = paste(location, target_variable),
                             levels = target_levels,
                             labels = target_labels))
-         
-horizon_cols <- c("16 weeks ago" = "#a1dab4", 
-                  "8 weeks ago" = "#41b6c4", 
-                  "4 weeks ago" = "#225ea8")
+# Include observed data
+weekly_ensembles <- weekly_ensembles |>
+    left_join(results |>
+                distinct(target, target_end_date, obs_100k), 
+              by = c("target", "target_end_date"))
 ```
-
-We created ensembles using between 4 and `r length(unique(weekly[["weights"]][["forecast_date"]]))` weeks' observed data.
 
 
 ```{r plot-weekly-ensembles, warning=FALSE, fig.dim=c(8,8)}
 # Plot -------------------------------------------
-# set up data for plotting
-obs_data <- results |>
-    distinct(target, target_end_date, obs_100k)
-
-weekly_ensemble_plot <- weekly_ensembles |>
-  # add observed data
-    full_join(obs_data, 
-              by = c("target", "target_end_date")) |> 
-  # shape for plotting
-    pivot_wider(names_from = quantile) |>
-    mutate(median = q0.5) |>
-    select(-q0.5) |>
-    mutate(forecast_date = as.Date(forecast_date),
-           scenario_id = factor(scenario_id))
-
+# set up colours
+horizon_cols <- c("16 weeks ago" = "#a1dab4", 
+                  "8 weeks ago" = "#41b6c4", 
+                  "4 weeks ago" = "#225ea8",
+                  "Unweighted" = "red")
 # Plot
-weekly_ensemble_plot <- weekly_ensemble_plot |>
+weekly_ensemble_plot <- forecasts |>
+  mutate(target = ordered(x = paste(location, target_variable),
+                          levels = target_levels,
+                          labels = target_labels)) |> 
+  select(-c(location, target_variable)) |> 
+    # shape data for plotting
+  group_by(target, forecast_date, target_end_date) |> 
+  filter(quantile %in% c(0.01, 0.5, 0.99)) |> 
+  pivot_wider(values_from = prediction,
+                names_from = quantile,  
+                names_prefix = "q") |>
+  rename(median = q0.5) |>
+    # ----- Plot
     ggplot(aes(x = target_end_date,
-               group = horizon_f,
-               col = horizon_f,
-               fill = horizon_f
-    )) +
+               group = model,
+               col = model,
+               fill = model)) +
     # ----- Geoms
     # ensembles
     geom_ribbon(aes(ymin = q0.01, ymax = q0.99),
@@ -270,7 +273,7 @@ weekly_ensemble_plot <- weekly_ensemble_plot |>
                 alpha = 0.5) +
     geom_line(aes(y = median), alpha = 0.5, lwd = 1) +
     # observed data as points
-    geom_point(aes(y = obs_100k),
+    geom_point(aes(y = true_value),
                colour = "grey20", size = 0.6,
                show.legend = FALSE) +
     # show start date of weighted forecasting
@@ -299,6 +302,60 @@ weekly_ensemble_plot <- weekly_ensemble_plot |>
 weekly_ensemble_plot
 ```
 
+```{r score-weekly-ensembles, warning=FALSE}
+# Format forecasts and observations for scoring
+forecasts <- weekly_ensembles |>
+  mutate(model = weighting,
+         quantile = as.numeric(gsub(pattern = "q", replacement = "",
+                                    x = quantile)),
+         forecast_date = as.Date(forecast_date)) |>
+  rename(prediction = value,
+         true_value = obs_100k) |>
+  select(-c(scenario_id, horizon, target)) |>
+  # remove where no data (after March 2023)
+  filter(target_end_date <= as.Date("2023-03-04") &
+           !is.na(model))
+
+# Score forecasts on log scale
+scores <- forecasts |>
+  mutate(
+    scale = "log",
+    true_value = log(true_value + 1e-05), #1/100000
+    prediction = log(pmax(prediction, 0) + 1e-05)) |>
+  score(metrics = c("interval_score")) |>
+  summarise_scores(by = c("location", "target_variable",
+                          "target_end_date", "forecast_date",
+                          "model", "scale"),
+                   na.rm = TRUE)
+
+# Score all forecasts relative to each other (pairwise) -----
+# set variables to group scores within
+score_pairwise <- pairwise_comparison(scores = scores,
+                                      metric = "interval_score",
+                                      baseline = "Unweighted",
+                                      by = c("model", "scale",
+                                             "location", "target_variable"))
+score_pairwise <- score_pairwise |>
+  filter(compare_against == "Unweighted") |>
+  select(model, scale, location, target_variable, rel_wis = scaled_rel_skill)
+
+# Plot --------------------------------------------------------------------
+score_pairwise |>
+  mutate(target = paste(location, target_variable),
+         model = as.numeric(substr(start = 1, stop = 2, model))) |>
+  ggplot(aes(x = model, y = rel_wis, col = target)) +
+  geom_line() +
+  geom_point() +
+  geom_hline(yintercept = 1, lty = 2) +
+  scale_x_continuous(breaks = c(-4,0,4,8,16)) +
+  labs(y = "Relative WIS compared to unweighted", 
+       x = "Weeks performance used for trajectory weighting",
+       caption = "Ensembles of trajectories, using increasing weeks of data to weight each trajectory.") +
+  theme_bw() +
+  theme(legend.position = "bottom")
+```
+
+----------------------------
 
 ```{r supplement-weighted-width}
 # look at interval width of ensembles over comparable time periods
