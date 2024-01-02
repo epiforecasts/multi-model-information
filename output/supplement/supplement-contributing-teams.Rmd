@@ -1,7 +1,8 @@
 ---
-title: "Round 2: contributing teams"
-output: html_document
+output: pdf_document
 ---
+
+## Modelling teams
 
 Modelling teams were asked to give a short description of their methods, among other metadata. 
 
@@ -17,7 +18,8 @@ models <- unique(results$model)
 mtd <- map_dfr(models,
            ~ yaml::read_yaml(paste0("https://raw.githubusercontent.com/covid19-forecast-hub-europe/covid19-scenario-hub-europe/main/model-metadata/", .x, ".yml")) |> 
              unlist()) |> 
-  select(Team = team_name, Model = model_abbr, Methods = methods)
+  mutate(team_name = paste0("**", team_name, "**", "\n", model_abbr)) |> 
+  select(Team = team_name, Methods = methods)
 
 knitr::kable(mtd)
 ```
