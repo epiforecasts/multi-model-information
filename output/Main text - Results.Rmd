@@ -265,7 +265,7 @@ weekly_ensemble_plot <- weekly_ensemble_weighted |>
           strip.placement = "outside",
           strip.text = element_text(face = "bold", size = 8))
 
-ggsave(filename = here("output", "figure-2.jpg"),
+ggsave(filename = here("output", "figures", "figure-2.jpg"),
        plot = weekly_ensemble_plot, 
        width = 6, height = 8)
 
@@ -337,7 +337,7 @@ scores_plot <- score_pairwise |>
 # title = "Performance of weighted forecasts by weeks' data used",
 # caption = "Forecasting performance of ensembles, forecasting weekly over the future period (to 22 July 2023) \n using increasing weeks of data to weight each trajectory. Performance measured by the weighted interval score (WIS) of each weighted ensemble, relative to an equivalent ensemble with equal weights for each trajectory (reference line at 1)"
 
-ggsave(filename = here("output", "figure-3.jpg"), 
+ggsave(filename = here("output", "figures", "figure-3.jpg"), 
        plot = scores_plot,
        width = 6, height = 8)
 
@@ -480,5 +480,5 @@ pdftools::pdf_combine(c(here("output", "figures", "SI-figure-1.pdf"),
               here("output", "figures", "SI-figure-2.pdf"),
               here("output", "supplement", "SI-contributing-teams.pdf"),
               here("output", "supplement", "Round 2 realtime report.pdf")),
-            output = "Supplement.pdf")
+            output = here("output", "Supplement.pdf"))
 ```
