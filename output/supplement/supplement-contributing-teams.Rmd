@@ -12,9 +12,8 @@ library(dplyr)
 library(purrr)
 source(here("code", "import-results.R"))
 
-results <- import_projections(round = 2, local = T, n_model_min = 3) 
+results <- import_projections(round = 2, local = TRUE, n_model_min = 3) 
 models <- unique(results$model)
-
 mtd <- map_dfr(models,
            ~ yaml::read_yaml(paste0("https://raw.githubusercontent.com/covid19-forecast-hub-europe/covid19-scenario-hub-europe/main/model-metadata/", .x, ".yml")) |> 
              unlist()) |> 

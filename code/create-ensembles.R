@@ -93,8 +93,13 @@ create_weekly_ensembles <- function(results) {
   # Dates for ensemble creation
   latest_data <- max(subset(results, !is.na(obs))$target_end_date)
   ensemble_dates <- unique(results$target_end_date)
-  forecast_dates <- ensemble_dates[5:length(ensemble_dates)] # start at 4 weeks in
-  forecast_dates <- forecast_dates[forecast_dates <= latest_data + 7] # only forecast up to where we can evaluate with observed data
+  # -----EDIT----
+  # forecast_dates <- ensemble_dates[5:length(ensemble_dates)] # start at 4 weeks in
+  #
+  forecast_dates <- ensemble_dates
+  #
+  # forecast_dates <- forecast_dates[forecast_dates <= latest_data + 7] # only forecast up to where we can evaluate with observed data
+  #---- end edit----
 
   # Divide results with weekly expanding history of observations
   results_window <- map(forecast_dates,
@@ -118,7 +123,9 @@ create_weekly_ensembles <- function(results) {
                  0.975, 0.99)
   ensembles <- map_dfr(results_scored,
                        ~ .x |>
-                         group_by(location, target_variable, target_end_date) |>
+                         group_by(location, target_variable,
+                                  target_end_date,
+                                  n_weeks_scored) |>
                          reframe(
                            value = cNORM::weighted.quantile.harrell.davis(
                              x = value_100k,
@@ -131,10 +138,12 @@ create_weekly_ensembles <- function(results) {
                        .id = "forecast_date") |>
     ungroup()
 
-  # Add an unweighted ensemble to use as a baseline for evaluation
+  # Add an unweighted ensemble (one for each equivalent to all the weighted ensembles) to use as a baseline for evaluation
   ensembles_unweighted <- map_dfr(results_scored,
                        ~ .x |>
-                         group_by(location, target_variable, target_end_date) |>
+                         group_by(location, target_variable,
+                                  target_end_date,
+                                  n_weeks_scored) |>
                          reframe(
                            value = quantile(value_100k, quantiles),
                            quantile = paste0("q", quantiles),
@@ -144,15 +153,12 @@ create_weekly_ensembles <- function(results) {
                        .id = "forecast_date") |>
     ungroup()
 
-  ensembles <- bind_rows(ensembles, ensembles_unweighted)
+  ensembles <- bind_rows(ensembles, ensembles_unweighted) |>
+    mutate(n_weeks_scored = ifelse(is.na(n_weeks_scored), 0, n_weeks_scored),
+           horizon = as.numeric(target_end_date - as.Date(forecast_date)) / 7)
 
-  # only keep forecasts for specified horizons
-  ensembles <- ensembles |>
-    mutate(horizon = as.numeric(target_end_date - as.Date(forecast_date)) / 7)
-  # ie conditioned on data up to n weeks ago
-
-  weekly_ensembles <- list(ensembles = ensembles,
+  weekly <- list(ensembles = ensembles,
                            weights = weights)
 
-  return(weekly_ensembles)
+  return(weekly)
 }
