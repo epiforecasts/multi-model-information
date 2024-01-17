@@ -2,11 +2,23 @@
 output: pdf_document
 ---
 
-## Modelling teams
+# Supplementary Information
 
-Modelling teams were asked to give a short description of their methods, among other metadata. 
+## SI Figure 1
 
-```{r, echo=FALSE, warning=FALSE, message=FALSE}
+![](./output/figures/SI-figure-1.jpg)
+
+## SI Figure 2
+
+![](./output/figures/SI-figure-2.jpg)
+
+SI Figure 2. Distribution of forecast performance scores (relative WIS), of forecasts from model trajectories weighted using 0 through 31 weeks' available data. Performance is compared to an unweighted ensemble (reference line at 1).
+
+## SI Table 1
+
+Teams that contributed models to Round 2 of the European Scenario Hub, with self-described methods and links to further information.
+
+```{r teams, echo=FALSE, warning=FALSE, message=FALSE}
 library(here)
 library(dplyr)
 library(purrr)
@@ -26,3 +38,11 @@ See also:
 
 - Full model metadata, at: https://github.com/covid19-forecast-hub-europe/covid19-scenario-hub-europe/tree/main/model-metadata
 - Information about each model's assumptions for Round 2, at: https://github.com/covid19-forecast-hub-europe/covid19-scenario-hub-europe/tree/main/model-abstracts/2022-07-24 
+
+# Round 2 report
+
+The following pages are the original website reporting for the European Scenario Hub Round 2 as of July 2022. 
+
+The report is currently (January 2023) available at: https://covid19scenariohub.eu/report2.html
+
+Code to generate this report is available at: https://github.com/european-modelling-hubs/covid19-scenario-hub-europe-website/blob/main/report2.Rmd
