@@ -158,7 +158,7 @@ plot_ensembles <- ensembles |>
           strip.background = element_blank(),
           strip.placement = "outside")
 
-ggsave(filename = here("output", "figures", "figure-1.pdf"),
+ggsave(filename = here("output", "figures", "figure-1.jpg"),
        plot = plot_ensembles_samples, 
        width = 8, height = 8)
   
@@ -199,21 +199,19 @@ weekly_ensemble_plotdata <- weekly_ensembles |>
                           levels = target_levels,
                           labels = target_labels),
          weighting = ordered(x = weighting,
-                             levels = c("16 weeks ago",
-                                        "8 weeks ago",
-                                        "4 weeks ago",
-                                        "Unweighted" = "NA"))) |> 
+                             levels = names(horizon_cols))) |> 
   select(-c(location, target_variable)) |> 
   group_by(target, forecast_date, target_end_date) |> 
   filter(quantile %in% c("q0.01", "q0.25", "q0.5", "q0.75", "q0.99")) |> 
   pivot_wider(values_from = value,
                 names_from = quantile) |>
-  rename(median = q0.5) 
+  rename(median = q0.5) |> 
+  filter(!is.na(weighting))
 # split out weighted/unweighted so they can have separate geoms
 weekly_ensemble_weighted <- weekly_ensemble_plotdata |>
   filter(weighting %in% c("16 weeks ago", "8 weeks ago", "4 weeks ago")) 
 weekly_ensemble_unweighted <- weekly_ensemble_plotdata |>
-  filter(weighting == "NA")
+  filter(scenario_id == "Unweighted")
 
 # ----- Plot
 weekly_ensemble_plot <- weekly_ensemble_weighted |> 
@@ -254,14 +252,13 @@ weekly_ensemble_plot <- weekly_ensemble_weighted |>
     scale_x_date(limits = c(min(results$target_end_date),
                             as.Date("2023-03-11")),
                  breaks = "1 month", date_labels = "%b '%y") +
-    scale_colour_manual(values = horizon_cols,
-                        aesthetics = c("fill", "colour")) +
+    scale_fill_discrete(breaks = names(horizon_cols), type = horizon_cols) +
     # theme
     theme(legend.position = "bottom",
           strip.background = element_blank(),
           strip.placement = "outside")
 
-ggsave(filename = here("output", "figures", "figure-2.pdf"),
+ggsave(filename = here("output", "figures", "figure-2.jpg"),
        plot = weekly_ensemble_plot, 
        width = 8, height = 7)
 
@@ -346,7 +343,7 @@ scores_plot <- score_pairwise |>
 # title = "Performance of weighted forecasts by weeks' data used",
 # caption = "Forecasting performance of ensembles, forecasting weekly over the future period (to 22 July 2023) \n using increasing weeks of data to weight each trajectory. Performance measured by the weighted interval score (WIS) of each weighted ensemble, relative to an equivalent ensemble with equal weights for each trajectory (reference line at 1)"
 
-ggsave(filename = here("output", "figures", "figure-3.pdf"), 
+ggsave(filename = here("output", "figures", "figure-3.jpg"), 
        plot = scores_plot,
        width = 8, height = 6)
 
@@ -354,8 +351,6 @@ scores_plot
 ```
 
 # Supplementary Information
-
-SI Figure 1: Difference between uncertainty ranges
 
 ```{r width-ensembles, fig.width = 8}
 get_interval_widths <- function(ensemble) {
@@ -439,16 +434,12 @@ weekly_width_plot <- weekly_widths |>
         strip.background = element_blank(),
         strip.placement = "outside")
 
-title <- "SI Figure 1. Mean central prediction intervals at increasing distances from the median"
-
-caption <- "The 52-week mean of incidence per 100,000 population across all time points and scenarios, \n showing mean central prediction intervals at increasing distances from the median (interval width), \n by aggregation method (A) or weighting (B). The median estimate for each ensemble\n has 0 interval width (x-axis), with uncertainty increasing until an interval width at 0.98 \n represents the 1%-99% credibility interval around the median." 
-
 combined_width_plot <- width_plot +
   weekly_width_plot +
-  plot_annotation(title = title, caption = caption, tag_levels = "A")
+  plot_annotation(tag_levels = "A")
 
 # Save/print
-ggsave(filename = here("output", "figures", "SI-figure-1.pdf"),
+ggsave(filename = here("output", "figures", "SI-figure-1.jpg"),
        plot = combined_width_plot, 
        width = 12, height = 8)
 
@@ -461,32 +452,23 @@ scores_boxplot <- score_pairwise |>
   ggplot(aes(x = target, y = rel_wis, col = target)) +
   geom_boxplot() +
   geom_hline(yintercept = 1, lty = 2) +
-  labs(x = NULL, y = "Relative WIS",
-       title = "SI Figure 2. Performance of weighted forecasts",
-     caption = "Distribution of forecast performance scores (relative WIS), of forecasts from \n model trajectories weighted using 0 through 31 weeks' available data. \n Performance is compared to an unweighted ensemble (reference line at 1)") +
+  labs(x = NULL, y = "Relative WIS") +
+  coord_flip() +
   scale_color_brewer(palette = "Dark2") +
   theme(legend.position = "none")
 
-ggsave(filename = here("output", "figures", "SI-figure-2.pdf"),
+ggsave(filename = here("output", "figures", "SI-figure-2.jpg"),
        plot = scores_boxplot, 
        width = 7, height = 5)
 scores_boxplot
 ```
 
-----------------------
-
 ```{r create-supplement}
 # Add information on contributing teams
-if (local == FALSE) {
-  rmarkdown::render(here("output", "supplement",
-                       "supplement-contributing-teams.Rmd"),
-                  output_file = here("output", "supplement",
-                                     "SI-contributing-teams.pdf"))
-}
+rmarkdown::render(here("output", "supplement.Rmd"),
+                  output_file = here("output", "supplement", "supplement-part-1.pdf"))
 # Create a combined PDF supplement file
-pdftools::pdf_combine(c(here("output", "figures", "SI-figure-1.pdf"),
-              here("output", "figures", "SI-figure-2.pdf"),
-              here("output", "supplement", "SI-contributing-teams.pdf"),
+pdftools::pdf_combine(c(here("output", "supplement", "supplement-part-1.pdf"),
               here("output", "supplement", "Round 2 realtime report.pdf")),
             output = here("output", "supplement.pdf"))
 ```
