@@ -1,47 +1,34 @@
 
-## Characterising information loss due to aggregating epidemic model outputs
+## Characterising information gains and losses when collecting multiple epidemic model outputs
 
-This work aims to demonstrate what information is lost in the process of summarising model output in quantiles when contributing to a multi-model epidemic modelling hub, in terms of key epidemic characteristics; summarising uncertainty using an ensemble; and exploring performance against observed data. 
+Katharine Sherratt 1, Ajitesh Srivastava 2, Kylie Ainslie 3, David E. Singh 4, Aymar Cublier 4, Miguel Guzman Merino 4, Maria Cristina Marinescu 5, Jesus Carretero 4, Alberto Cascajo Garcia 4, Nicolas Franco 6, Lander Willem 7, Steven Abrams 8, Christel Faes 8, Philippe Beutels 8, Niel Hens 8, Sebastian Müller 9, Billy Charlton 9, Ricardo Ewert 9, Sydney Paltra 9, Christian Rakow 9, Jakob Rehmann 9, Tim Conrad 10, Christof Schütte 10, Kai Nagel 9, Sam Abbott 1, Rok Grah 11, Rene Niehus 11, Bastian Prasse 11, Frank Sandmann 11, Sebastian Funk 1
 
-Work led by Kath Sherratt on behalf of the European Scenario Modelling Hub (Round 2). See [authors](#authors).
+_1 London School of Hygiene and Tropical Medicine, London, UK; 2 University of Southern California, Los Angeles, USA; 3 RIVM, Bilthoven, Netherlands; 4 Universidad Carlos III de Madrid, Madrid, Spain; 5 Barcelona Supercomputing Center, Barcelona, Spain; 6 University of Namur (Belgium), Namur, Belgium; 7 University of Antwerp (Belgium), Antwerp, Belgium; 8 University of Hasselt (Belgium), Hasselt, Belgium; 9 TU Berlin, Berlin, Germany; 10 ZIB Berlin, Berlin, Germany; 11 ECDC, Stockholm, Sweden_
 
-- See the [Abstract](#abstract) and [presentation](https://docs.google.com/presentation/d/1tktKl41Sa7KMzwUHpLcJVFEechMlHut5aoKC6lX6tbc/edit#slide=id.g2177422d982_0_45)
-- Read the [current draft under co-author review](output/Co-author%20review_%20Characterising%20information%20loss%20due%20to%20aggregating%20epidemic%20model%20outputs.pdf). 
-- All [code](code) and [data](data) are available: the best place to start is the [results Rmarkdown document](output/output-rmd.rmd)
+- [Abstract](#abstract)
+- [Full manuscript](output/REV1_Characterising-information-loss.pdf) and [Supplement](output/Supplement.pdf)
+- [Code](code) and [data](data): the best place to start with reproducing results is the fully documented [results Rmarkdown](output/results.Rmd)
 
----
+#### Publishing status
 
-#### Current status
-
-- We are currently at pre-submission stage
-   - A full working draft is under review by co-authors
-   - See [current draft (pdf)](output/Co-author%20review_%20Characterising%20information%20loss%20due%20to%20aggregating%20epidemic%20model%20outputs.pdf)
-- Next steps will be to add to medRxiv and submit to Epidemics
+- We submitted to Epidemics, with reviews requiring major revision; we have now submitted a revised manuscript
+- Manuscript available on medRxiv
 
 #### Development
 
 - Code
-   - Results are generated from an [Rmd document](https://github.com/covid19-forecast-hub-europe/covid19-scenario-hub-europe/blob/analysis/analysis/output/output-rmd.rmd)
+   - Results and supplement are generated from an [Rmd document](https://github.com/covid19-forecast-hub-europe/covid19-scenario-hub-europe/blob/analysis/analysis/output/results.rmd)
    - All comments and feedback, as well as requests for guidance on using the code, are very welcome - please [open an Issue](https://github.com/covid19-forecast-hub-europe/aggregation-info-loss/issues) or contact [Kath Sherratt](https://github.com/kathsherratt)
    - Full commit history for this project prior to 16 April 2023 is available as a [branch of the Scenario hub](https://github.com/covid19-forecast-hub-europe/covid19-scenario-hub-europe/tree/analysis/analysis)
-- Analysis
-   - Write up is currently in a [Google doc](https://docs.google.com/document/d/1Kh_vvFbWwnLhfChRS-yMyARCnkL0ttAvDXsJQIwwFcY/edit)
-   - The results section is also available in [html](https://htmlpreview.github.io/?https://raw.githubusercontent.com/covid19-forecast-hub-europe/aggregation-info-loss/output/output-rmd.html)
 
 ---
 
-#### Authors
-
-Katharine Sherratt 1, Ajitesh Srivastava 2, Kylie Ainslie 3, David E. Singh 4, Aymar Cublier 4, Miguel Guzman Merino 4, Maria Cristina Marinescu 5, Jesus Carretero 4, Alberto Cascajo Garcia 4, Nicolas Franco 6, Lander Willem 7, Steven Abrams 8, Christel Faes 8, Philippe Beutels 8, Niel Hens 8, Sebastian Müller 9, Billy Charlton 9, Ricardo Ewert 9, Sydney Paltra 9, Christian Rakow 9, Jakob Rehmann 9, Tim Conrad 10, Christof Schütte 10, Kai Nagel 9, Rok Grah 11, Rene Niehus 11, Bastian Prasse 11, Frank Sandmann 11, Sebastian Funk 1
-
-_1 London School of Hygiene and Tropical Medicine, London, UK; 2 University of Southern California, Los Angeles, USA; 3 RIVM, Bilthoven, Netherlands; 4 Universidad Carlos III de Madrid, Madrid, Spain; 5 Barcelona Supercomputing Center, Barcelona, Spain; 6 University of Namur (Belgium), Namur, Belgium; 7 University of Antwerp (Belgium), Antwerp, Belgium; 8 University of Hasselt (Belgium), Hasselt, Belgium; 9 TU Berlin, Berlin, Germany; 10 ZIB Berlin, Berlin, Germany; 11 ECDC, Stockholm, Sweden_
-
 #### Abstract
 
-Background. Epidemic modelling projections, and particularly comparisons between multiple models, are increasingly seen as a reliable source of policy-relevant evidence during epidemic outbreaks. Results from multiple models are typically collected by asking modellers to summarise a distribution of results using descriptive statistics. Here we look at information loss from this method, compared to collecting a subsample of underlying model simulations. We explored information losses in terms of key epidemic quantities, uncertainty in an ensemble, and evaluating performance over time.
+Background. Collaborative comparisons and combinations of multiple epidemic models are used as policy-relevant evidence during epidemic outbreaks. In the process of collecting multiple projections of the future, such collaborations may gain or lose relevant information. Typically, each modeller contributes their own probabilistic summary using descriptive statistics at each modelled time step. We compare this method to directly collecting simulated trajectories from each of the models. We aimed to explore information on key epidemic quantities; ensemble uncertainty; and performance against data in order to investigate the potential to continuously gain information from only a single cross-sectional collection of model results.
 
-Methods. We compared projections from Round 2 of the European COVID-19 Scenario Modelling Hub. We asked modellers to model a set of pre-specified scenarios, and from each team collected up to 100 simulations for each projection target. First, we used all simulations to compare key epidemic characteristics including peak times and cumulative totals. Second, to recreate current practice, we drew a set of standard quantiles from the submitted simulations for each model, and followed the widely used ensemble method of taking a median average across models at each quantile. We compared this to an ensemble created by drawing probabilistic quantiles from all available simulations at each time step. Third, we compared each simulation to observed data using mean average error. We used this to weight each simulation in a weighted median ensemble of all simulations.
+Methods. We compared July 2022 projections from the European COVID-19 Scenario Modelling Hub. Using shared scenario assumptions, five modelling teams each contributed up to 400 simulated trajectories projecting incidence in each of Belgium, the Netherlands, and Spain. We compared epidemic characteristics including incidence, peaks, and cumulative totals. We also created a probabilistic ensemble drawn from all available trajectories at each time step, and compared this to two common ensemble methods of a median across each model’s quantiles, or a linear opinion pool. We then measured the predictive accuracy of each individual trajectory compared to later observations, and used this to create a weighted ensemble combining across all simulations. We repeated this sequentially against increasing weeks of observed data. We then evaluated the performance of these ensembles to reflect their variation in performance with varying amounts of observed data. 
 
-Results. We found that by collecting simulations we were able to show trajectory shapes, peaks, and cumulative total burden. The sample of simulations contained a right-skewed distribution which was poorly summarised by an ensemble of quantile intervals. As expected, we observed wide variation in the forecasting performance of each simulation. An ensemble weighted by predictive performance substantially narrowed the range of plausible future incidence and excluded some epidemic shapes altogether. 
+Results. By collecting models’ simulated trajectories, we were able to show more policy-relevant epidemic characteristics, and evaluate performance against data, as opposed to collecting models’ quantiles at each time point. Sampled trajectories contained a right-skewed distribution which was poorly captured by an ensemble of models’ quantile intervals but well represented by a linear opinion pool. Ensembles weighted by predictive performance typically retained the range of plausible incidence over time, and in some cases narrowed this range by excluding some epidemic shapes altogether.
 
-Conclusions. Understanding the potential sources of information loss in collecting multiple model projections may support improving the accuracy, reliability, and communication of collaborative infectious disease modelling efforts. 
+Conclusions. We observed several information gains from collecting modelled trajectories rather than summarised quantile distributions, highlighting the potential to create continuous new information from a single collection of model output. The value of different information gains and losses may vary with the aims of each collaborative effort, depending on the requirements and flexibility required by projection users. Understanding the differing information potential of methods to collect model projections can support the accuracy, sustainability, and communication of collaborative infectious disease modelling efforts. 
