@@ -6,13 +6,13 @@ Katharine Sherratt 1, Ajitesh Srivastava 2, Kylie Ainslie 3, David E. Singh 4, A
 _1 London School of Hygiene and Tropical Medicine, London, UK; 2 University of Southern California, Los Angeles, USA; 3 RIVM, Bilthoven, Netherlands; 4 Universidad Carlos III de Madrid, Madrid, Spain; 5 Barcelona Supercomputing Center, Barcelona, Spain; 6 University of Namur (Belgium), Namur, Belgium; 7 University of Antwerp (Belgium), Antwerp, Belgium; 8 University of Hasselt (Belgium), Hasselt, Belgium; 9 TU Berlin, Berlin, Germany; 10 ZIB Berlin, Berlin, Germany; 11 ECDC, Stockholm, Sweden_
 
 - [Abstract](#abstract)
-- [Full manuscript](output/REV1_Characterising-information-loss.pdf) and [Supplement](output/Supplement.pdf)
+- [Full manuscript](output/submission-latest/REV1_Characterising-information-loss.pdf) and [Supplement](output/submission-latest/Supplement.pdf)
 - [Code](code) and [data](data): the best place to start with reproducing results is the fully documented [results Rmarkdown](output/results.Rmd)
 
 #### Publishing status
 
 - We submitted to Epidemics, with reviews requiring major revision; we have now submitted a revised manuscript
-- Manuscript available on medRxiv
+- [Available on medRxiv](https://www.medrxiv.org/content/10.1101/2023.07.05.23292245v2)
 
 #### Development
 
