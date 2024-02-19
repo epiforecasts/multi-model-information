@@ -11,8 +11,8 @@ _1 London School of Hygiene and Tropical Medicine, London, UK; 2 University of S
 
 #### Publishing status
 
-- We submitted to Epidemics, with reviews requiring major revision; we have now submitted a revised manuscript
 - [Available on medRxiv](https://www.medrxiv.org/content/10.1101/2023.07.05.23292245v2)
+- We submitted to Epidemics, with reviews requiring major revision; we have now submitted a revised manuscript
 
 #### Development
 
