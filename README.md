@@ -1,29 +1,25 @@
+[![DOI](https://zenodo.org/badge/628677591.svg)](https://zenodo.org/doi/10.5281/zenodo.10891376)
 
 ## Characterising information gains and losses when collecting multiple epidemic model outputs
+<details>
+<summary>Katharine Sherratt (1), Ajitesh Srivastava (2), Kylie Ainslie (3), David E. Singh (4), Aymar Cublier (4), Miguel Guzman Merino (4), Maria Cristina Marinescu (5), Jesus Carretero (4), Alberto Cascajo Garcia (4), Nicolas Franco (6), Lander Willem (7), Steven Abrams (8), Christel Faes (8), Philippe Beutels (8), Niel Hens (8), Sebastian Müller (9), Billy Charlton (9), Ricardo Ewert (9), Sydney Paltra (9), Christian Rakow (9), Jakob Rehmann (9), Tim Conrad (10), Christof Schütte (10), Kai Nagel (9), Sam Abbott (1), Rok Grah (11), Rene Niehus (11), Bastian Prasse (11), Frank Sandmann (11), Sebastian Funk (1)</summary>
+   
+1 London School of Hygiene and Tropical Medicine, London, UK; 2 University of Southern California, Los Angeles, USA; 3 RIVM, Bilthoven, Netherlands; 4 Universidad Carlos III de Madrid, Madrid, Spain; 5 Barcelona Supercomputing Center, Barcelona, Spain; 6 University of Namur (Belgium), Namur, Belgium; 7 University of Antwerp (Belgium), Antwerp, Belgium; 8 University of Hasselt (Belgium), Hasselt, Belgium; 9 TU Berlin, Berlin, Germany; 10 ZIB Berlin, Berlin, Germany; 11 ECDC, Stockholm, Sweden
+</details>
 
-Katharine Sherratt 1, Ajitesh Srivastava 2, Kylie Ainslie 3, David E. Singh 4, Aymar Cublier 4, Miguel Guzman Merino 4, Maria Cristina Marinescu 5, Jesus Carretero 4, Alberto Cascajo Garcia 4, Nicolas Franco 6, Lander Willem 7, Steven Abrams 8, Christel Faes 8, Philippe Beutels 8, Niel Hens 8, Sebastian Müller 9, Billy Charlton 9, Ricardo Ewert 9, Sydney Paltra 9, Christian Rakow 9, Jakob Rehmann 9, Tim Conrad 10, Christof Schütte 10, Kai Nagel 9, Sam Abbott 1, Rok Grah 11, Rene Niehus 11, Bastian Prasse 11, Frank Sandmann 11, Sebastian Funk 1
-
-_1 London School of Hygiene and Tropical Medicine, London, UK; 2 University of Southern California, Los Angeles, USA; 3 RIVM, Bilthoven, Netherlands; 4 Universidad Carlos III de Madrid, Madrid, Spain; 5 Barcelona Supercomputing Center, Barcelona, Spain; 6 University of Namur (Belgium), Namur, Belgium; 7 University of Antwerp (Belgium), Antwerp, Belgium; 8 University of Hasselt (Belgium), Hasselt, Belgium; 9 TU Berlin, Berlin, Germany; 10 ZIB Berlin, Berlin, Germany; 11 ECDC, Stockholm, Sweden_
+Now published at: [https://www.sciencedirect.com/science/article/pii/S1755436524000264](https://doi.org/10.1016/j.epidem.2024.100765)
 
 ### Summary
 We compared methods of collecting information from multiple infectious disease models. We found that key epidemic characteristics were less well represented by a quantile-summary method, while collecting modelled trajectories enabled continuous evaluation against newly observed data. The significance of information gain or loss varies with each collaboration’s aims.
 
 - Find out more:
-   - Read the [abstract](#abstract)
-   - Read the [paper](output/submission-latest/REV1_Characterising-information-loss.pdf) (and [supplement](output/submission-latest/Supplement.pdf))
+   - Read the [abstract](#abstract) below, or the full [paper]([output/submission-latest/REV1_Characterising-information-loss.pdf](https://doi.org/10.1016/j.epidem.2024.100765))
    - Explore [code](code) and [data](data), and reproduce results in the fully documented [results Rmarkdown](output/results.Rmd)
-
-### Development
-
-#### Publication
-
-- [Available on medRxiv](https://www.medrxiv.org/content/10.1101/2023.07.05.23292245v2)
-- We submitted to Epidemics, and following reviews have now submitted a revised manuscript
 
 #### Reproducibility and contributions
 
 - Results and supplement are generated from an [Rmarkdown document](https://github.com/covid19-forecast-hub-europe/covid19-scenario-hub-europe/blob/analysis/analysis/output/results.rmd)
-- Your comments, feedback, and questions are very welcome! Please [open an Issue](https://github.com/covid19-forecast-hub-europe/aggregation-info-loss/issues) or contact [Kath Sherratt](https://github.com/kathsherratt)
+- Your comments, feedback, and questions are very welcome. Please [open an Issue](https://github.com/covid19-forecast-hub-europe/aggregation-info-loss/issues) or contact [Kath Sherratt](https://github.com/kathsherratt)
 
 Note: full commit history for this project prior to 16 April 2023 is available as a [branch of the Scenario hub](https://github.com/covid19-forecast-hub-europe/covid19-scenario-hub-europe/tree/analysis/analysis)
 
